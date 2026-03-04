@@ -501,8 +501,14 @@ const L_COLS = ['id','ts','user','action','target','det'];
 
 function rowToObj(cols, row) {
   const obj = {};
-  cols.forEach((c,i) => obj[c] = row[i] || '');
-  if(obj.stage !== undefined) obj.stage = parseInt(obj.stage)||1;
+  cols.forEach((c,i) => {
+    const v = (row[i] === undefined || row[i] === null) ? '' : row[i];
+    obj[c] = String(v);
+  });
+  // Fix types
+  obj.stage = parseInt(obj.stage) || 1;
+  // Null-ify empty date/nullable fields
+  ['vat','aat','oat'].forEach(k => { if(!obj[k]) obj[k] = null; });
   return obj;
 }
 
@@ -520,15 +526,29 @@ async function gasCall(action, payload={}) {
   }
   const url = GS_CONFIG.APPS_SCRIPT_URL;
   const body = JSON.stringify({action, ...payload});
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: {'Content-Type': 'text/plain'}, // text/plain avoids CORS preflight
-    body
-  });
-  if(!r.ok) throw new Error('Apps Script call failed: ' + r.status);
-  const d = await r.json();
-  if(d.error) throw new Error(d.error);
-  return d;
+  // Use no-cors mode with text/plain to avoid preflight — Apps Script handles this
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30000); // 30s timeout
+  try {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain'},
+      body,
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+    if(!r.ok) throw new Error('Apps Script call failed: ' + r.status);
+    const text = await r.text();
+    let d;
+    try { d = JSON.parse(text); }
+    catch(pe) { throw new Error('Invalid JSON response from Apps Script: ' + text.slice(0,100)); }
+    if(d.error) throw new Error('Apps Script error: ' + d.error);
+    return d;
+  } catch(e) {
+    clearTimeout(timer);
+    if(e.name === 'AbortError') throw new Error('Request timed out — Google Sheets is slow, try again');
+    throw e;
+  }
 }
 
 // ── High-level data functions ──────────────────────
@@ -547,6 +567,7 @@ async function loadData() {
     // Cache locally as offline fallback
     localStorage.setItem('pp_proctors_cache', JSON.stringify(proctors));
     localStorage.setItem('pp_logs_cache', JSON.stringify(logs));
+    console.log('Loaded', proctors.length, 'proctors,', logs.length, 'log entries from Sheets');
   } catch(e) {
     console.error('loadData error:', e);
     // Fallback to local cache
@@ -563,23 +584,23 @@ async function loadData() {
 }
 
 async function saveProctor(p, isNew=true) {
+  // Save to local cache immediately (optimistic)
+  localStorage.setItem('pp_proctors_cache', JSON.stringify(proctors));
+  // Then sync to Sheets
   try {
     await gasCall(isNew ? 'appendProctor' : 'updateProctor', {row: objToRow(P_COLS, p), id: p.id});
-    localStorage.setItem('pp_proctors_cache', JSON.stringify(proctors));
   } catch(e) {
     console.error('saveProctor error:', e);
-    toast('Warning: Could not sync to Google Sheets. Saved locally.','warning');
-    localStorage.setItem('pp_proctors_cache', JSON.stringify(proctors));
+    toast('Saved locally — could not sync to Sheets right now. Will retry on next action.','warning');
   }
 }
 
 async function saveLog(entry) {
-  try {
-    await gasCall('appendLog', {row: objToRow(L_COLS, entry)});
-    localStorage.setItem('pp_logs_cache', JSON.stringify(logs));
-  } catch(e) {
-    localStorage.setItem('pp_logs_cache', JSON.stringify(logs));
-  }
+  // Fire and forget — don't block UI waiting for log to save
+  localStorage.setItem('pp_logs_cache', JSON.stringify(logs));
+  gasCall('appendLog', {row: objToRow(L_COLS, entry)}).catch(e => {
+    console.warn('Log save failed (non-critical):', e.message);
+  });
 }
 
 function showLoading(on) {
@@ -617,9 +638,10 @@ async function doLogin(){
   showLoading(true);
   await loadData();
   await addLog('Login',CU.name,'Signed in as '+CU.role);
-  nav(CU.role==='admin'?'dashboard':'myProctors');
+  const startPage = CU.role==='admin'?'dashboard':'myProctors';
+  nav(startPage);
   badges();
-  toast('Welcome, '+CU.name+'!','success');
+  toast('Welcome, '+CU.name+'! '+proctors.length+' proctors loaded.','success');
 }
 
 function doLogout(){
