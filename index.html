@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Proctor Management Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:#0f1117;--surface:#181c27;--surface2:#1e2333;--surface3:#252a3a;
+  --border:#2d3348;--border2:#3a4060;
+  --accent:#4f8ef7;--accent5:#a78bfa;
+  --text:#e8eaf0;--text2:#9ca3b8;--text3:#6b7280;
+  --success:#6ee7b7;--warning:#f59e0b;--danger:#f87171;--info:#60a5fa;
+  --radius:10px;--radius2:6px;--shadow:0 4px 24px rgba(0,0,0,0.4);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:var(--surface);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:radial-gradient(ellipse at 30% 40%,#1a2540 0%,#0f1117 60%);}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:48px 40px;width:400px;box-shadow:var(--shadow);}
+.login-logo{text-align:center;margin-bottom:32px;}
+.login-logo .logo-icon{width:56px;height:56px;background:linear-gradient(135deg,var(--accent),var(--accent5));border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:16px;}
+.login-logo h1{font-size:20px;font-weight:700;}
+.login-logo p{color:var(--text2);font-size:13px;margin-top:4px;}
+.form-group{margin-bottom:16px;}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;}
+.req{color:var(--danger);margin-left:2px;}
+.opt{color:var(--text3);font-weight:400;font-size:11px;margin-left:4px;}
+.form-group input,.form-group select,.form-group textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius2);padding:10px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent);}
+.form-group input.ef{border-color:var(--danger);}
+.field-error{color:var(--danger);font-size:11px;margin-top:4px;min-height:14px;}
+.form-group select option{background:var(--surface2);}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:var(--radius2);border:none;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;}
+.btn-primary{background:var(--accent);color:#fff;}.btn-primary:hover{background:#3b7de8;}
+.btn-success{background:#059669;color:#fff;}.btn-success:hover{background:#047857;}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border);}.btn-ghost:hover{background:var(--surface2);color:var(--text);}
+.btn-danger{background:#dc2626;color:#fff;}.btn-danger:hover{background:#b91c1c;}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.btn-full{width:100%;justify-content:center;}
+.login-error{color:var(--danger);font-size:13px;margin-top:8px;text-align:center;min-height:20px;}
+#app{display:none;min-height:100vh;}
+.layout{display:flex;min-height:100vh;}
+.sidebar{width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;}
+.sidebar-header{padding:20px;border-bottom:1px solid var(--border);}
+.sidebar-logo{display:flex;align-items:center;gap:10px;}
+.sidebar-logo .logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--accent5));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.sidebar-logo span{font-size:15px;font-weight:700;line-height:1.2;}
+.sidebar-nav{flex:1;padding:12px 8px;overflow-y:auto;}
+.nst{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;padding:8px 12px 4px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius2);color:var(--text2);cursor:pointer;transition:all .15s;font-size:13px;font-weight:500;margin-bottom:1px;}
+.nav-item:hover{background:var(--surface2);color:var(--text);}
+.nav-item.active{background:rgba(79,142,247,.15);color:var(--accent);}
+.nav-item .icon{width:18px;text-align:center;font-size:15px;}
+.nav-badge{margin-left:auto;background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;}
+.sidebar-footer{padding:12px;border-top:1px solid var(--border);}
+.user-info{display:flex;align-items:center;gap:10px;padding:8px;}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent5));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;}
+.user-details{flex:1;min-width:0;}
+.user-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.user-role{font-size:10px;color:var(--text3);}
+.logout-btn{background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:4px;transition:color .2s;}
+.logout-btn:hover{color:var(--danger);}
+.main{margin-left:240px;flex:1;display:flex;flex-direction:column;}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.topbar-title{font-size:16px;font-weight:700;}
+.topbar-actions{display:flex;align-items:center;gap:10px;}
+.content{padding:24px;flex:1;}
+.page{display:none;}.page.active{display:block;}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+.page-header h2{font-size:20px;font-weight:700;}
+.page-header p{color:var(--text2);font-size:13px;margin-top:2px;}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px;margin-bottom:24px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
+.stat-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
+.stat-value{font-size:28px;font-weight:700;font-family:'DM Mono',monospace;line-height:1;}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:4px;}
+.s-a{border-left:3px solid var(--accent);}
+.s-s{border-left:3px solid var(--success);}
+.s-w{border-left:3px solid var(--warning);}
+.s-d{border-left:3px solid var(--danger);}
+.s-p{border-left:3px solid var(--accent5);}
+.vendor-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:24px;}
+.vendor-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center;}
+.vendor-name{font-size:13px;font-weight:700;margin-bottom:4px;}
+.vendor-count{font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent);}
+.vendor-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.tw{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.ttb{padding:14px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.si{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius2);padding:8px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;width:220px;transition:border-color .2s;}
+.si:focus{border-color:var(--accent);}
+.fsel{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius2);padding:8px 12px;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;cursor:pointer;}
+.tc2{margin-left:auto;font-size:12px;color:var(--text3);}
+.ox{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+thead{background:var(--surface2);}
+th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:12px 14px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text2);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,.02);}
+.tdn{color:var(--text);font-weight:600;}
+.tdi{font-family:'DM Mono',monospace;font-size:12px;color:var(--accent);}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;}
+.b-ip{background:rgba(245,158,11,.15);color:var(--warning);}
+.b-ve{background:rgba(96,165,250,.15);color:var(--info);}
+.b-ac{background:rgba(110,231,183,.15);color:var(--success);}
+.b-of{background:rgba(248,113,113,.15);color:var(--danger);}
+.bdot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+.vb{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;}
+.v-sai{background:rgba(79,142,247,.15);color:#60a5fa;}
+.v-tsn{background:rgba(167,139,250,.15);color:#a78bfa;}
+.v-avn{background:rgba(110,231,183,.15);color:#6ee7b7;}
+.v-anm{background:rgba(245,158,11,.15);color:#fbbf24;}
+.v-atu{background:rgba(248,113,113,.15);color:#f87171;}
+.v-awg{background:rgba(251,146,60,.15);color:#fb923c;}
+.ag{display:flex;gap:6px;}
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;padding:20px;}
+.mo.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.6);}
+.msm{max-width:420px;}.mmd{max-width:600px;}.mlg{max-width:820px;}
+.mh{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.mh h3{font-size:16px;font-weight:700;}
+.mcl{background:none;border:none;cursor:pointer;color:var(--text3);font-size:20px;line-height:1;transition:color .2s;}
+.mcl:hover{color:var(--text);}
+.mb{padding:24px;}
+.mf{padding:16px 24px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:flex-end;gap:10px;}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.fs2{grid-column:span 2;}
+.sec-t{font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.dg{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.di label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;}
+.di .val{font-size:13px;color:var(--text);}
+.tline{display:flex;flex-direction:column;}
+.tline-item{display:flex;gap:14px;padding-bottom:16px;position:relative;}
+.tline-item:not(:last-child)::before{content:'';position:absolute;left:15px;top:28px;bottom:0;width:1px;background:var(--border);}
+.tline-dot{width:30px;height:30px;border-radius:50%;background:var(--surface2);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
+.tline-b{flex:1;padding-top:4px;}
+.tline-a{font-size:13px;font-weight:600;color:var(--text);}
+.tline-m{font-size:11px;color:var(--text3);margin-top:2px;}
+.wf{display:flex;align-items:center;margin-bottom:24px;}
+.wfs{display:flex;align-items:center;gap:8px;}
+.wfc{width:28px;height:28px;border-radius:50%;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text3);flex-shrink:0;}
+.wfs.done .wfc{background:var(--success);border-color:var(--success);color:#000;}
+.wfs.cur .wfc{background:var(--accent);border-color:var(--accent);color:#fff;}
+.wfl{font-size:12px;font-weight:600;color:var(--text3);}
+.wfs.done .wfl,.wfs.cur .wfl{color:var(--text);}
+.wfcon{flex:1;height:2px;background:var(--border);max-width:40px;}
+.wfcon.done{background:var(--success);}
+#toasts{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px;}
+.toast{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;gap:10px;min-width:280px;max-width:420px;box-shadow:var(--shadow);animation:si .3s ease;font-size:13px;font-weight:500;}
+.t-s{border-left:3px solid var(--success);}
+.t-e{border-left:3px solid var(--danger);}
+.t-i{border-left:3px solid var(--accent);}
+.t-w{border-left:3px solid var(--warning);}
+@keyframes si{from{transform:translateX(100%);opacity:0;}to{transform:translateX(0);opacity:1;}}
+.upzone{border:2px dashed var(--border2);border-radius:var(--radius);padding:32px;text-align:center;cursor:pointer;transition:all .2s;}
+.upzone:hover{border-color:var(--accent);background:rgba(79,142,247,.05);}
+.upi{font-size:32px;margin-bottom:12px;}
+.upzone p{color:var(--text2);font-size:13px;}
+.upzone span{color:var(--accent);font-weight:600;}
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:20px;}
+.tab{padding:10px 18px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text3);border-bottom:2px solid transparent;transition:all .2s;}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.tab:hover:not(.active){color:var(--text2);}
+.al{border-radius:var(--radius2);padding:12px 16px;font-size:13px;margin-bottom:16px;}
+.al-w{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--warning);}
+.al-i{background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--info);}
+.al-d{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--danger);}
+.al-s{background:rgba(110,231,183,.1);border:1px solid rgba(110,231,183,.3);color:var(--success);}
+.doclink{display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--text2);text-decoration:none;transition:all .2s;}
+.doclink:hover{border-color:var(--accent);color:var(--accent);}
+.inc-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
+.inc-card:hover{border-color:var(--border2);}
+.inc-name{font-size:15px;font-weight:700;margin-bottom:4px;}
+.inc-meta{font-size:12px;color:var(--text3);}
+.row-ok{background:rgba(110,231,183,.04);}
+.row-sk{background:rgba(248,113,113,.06);}
+.dtag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;}
+.dtag-ok{background:rgba(110,231,183,.15);color:var(--success);}
+.dtag-sk{background:rgba(248,113,113,.15);color:var(--danger);}
+.empty{text-align:center;padding:48px 24px;color:var(--text3);}
+.empty .ei{font-size:40px;margin-bottom:16px;}
+.empty h3{font-size:15px;font-weight:600;color:var(--text2);margin-bottom:6px;}
+.cred-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:10px;}
+.cred-role{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:10px;}
+.cred-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);}
+.cred-row:last-child{border-bottom:none;}
+.cred-label{font-size:13px;color:var(--text2);}
+.cred-val{font-family:'DM Mono',monospace;font-size:13px;color:var(--accent);}
+</style>
+</head>
+<body>
+
+<!-- LOGIN — clean, no hints -->
+<!-- LOADING OVERLAY -->
+<div id="loadingOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:16px;">
+  <div style="width:48px;height:48px;border:4px solid rgba(79,142,247,.3);border-top-color:#4f8ef7;border-radius:50%;animation:spin .8s linear infinite;"></div>
+  <div style="color:#e8eaf0;font-size:14px;font-weight:600;" id="loadingMsg">Syncing with Google Sheets...</div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg);}}</style>
+
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-icon">🛡️</div>
+      <h1>Proctor Portal</h1>
+      <p>Secure Proctor Management System</p>
+    </div>
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="lu" placeholder="Enter your username" autocomplete="username"/>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="lp" placeholder="Enter your password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="doLogin()">Sign In</button>
+    <div id="cfgWarning" style="display:none;margin-top:12px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:6px;padding:10px 14px;font-size:12px;color:#f59e0b;">
+      ⚠️ Google Sheets not configured yet. Running in offline mode — data will not persist across devices.
+    </div>
+    <p class="login-error" id="lerr"></p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <div class="logo-icon">🛡️</div>
+          <span>Proctor<br>Portal</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav" id="sNav"></nav>
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <div class="user-avatar" id="sAv">A</div>
+          <div class="user-details">
+            <div class="user-name" id="sNm">—</div>
+            <div class="user-role" id="sRl">—</div>
+          </div>
+          <button class="logout-btn" onclick="doLogout()" title="Sign out">⏏</button>
+        </div>
+      </div>
+    </aside>
+    <main class="main">
+      <div class="topbar">
+        <div class="topbar-title" id="tTl">Dashboard</div>
+        <div class="topbar-actions" id="tAc"></div>
+      </div>
+      <div class="content">
+
+        <!-- DASHBOARD -->
+        <div class="page" id="page-dashboard">
+          <div class="page-header"><div><h2>Dashboard</h2><p>System overview</p></div></div>
+          <div class="stats-grid" id="dStats"></div>
+          <div style="margin-bottom:16px;"><div class="sec-t">Vendor Breakdown</div><div class="vendor-grid" id="vGrid"></div></div>
+          <div class="sec-t">Recent Activity</div>
+          <div class="tw"><div class="ox"><table><thead><tr><th>Name</th><th>Vendor</th><th>Status</th><th>Updated</th></tr></thead><tbody id="rBody"></tbody></table></div></div>
+        </div>
+
+        <!-- ALL PROCTORS -->
+        <div class="page" id="page-proctors">
+          <div class="page-header"><div><h2>All Proctors</h2><p>Complete database</p></div></div>
+          <div class="tw">
+            <div class="ttb">
+              <input class="si" placeholder="🔍 Name, ID, Aadhaar..." id="sPro" oninput="renderPro()"/>
+              <select class="fsel" id="fVen" onchange="renderPro()"><option value="">All Vendors</option><option>Sai</option><option>TSN</option><option>Avner</option><option>A&M</option><option>Atura</option><option>Awign</option></select>
+              <select class="fsel" id="fSt" onchange="renderPro()"><option value="">All Status</option><option>In Progress</option><option>Verified</option><option>Active</option><option>Offboarded</option></select>
+              <span class="tc2" id="pCnt"></span>
+              <button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬇ Export</button>
+            </div>
+            <div class="ox"><table><thead><tr><th>ID</th><th>Name</th><th>Aadhaar</th><th>Vendor</th><th>Phone</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead><tbody id="pBody"></tbody></table></div>
+          </div>
+        </div>
+
+        <!-- IN PROGRESS -->
+        <div class="page" id="page-onboarding">
+          <div class="page-header"><div><h2>In Progress</h2><p>Pending verification or ID assignment</p></div></div>
+          <div class="tw"><div class="ox"><table><thead><tr><th>Name</th><th>Vendor</th><th>Aadhaar</th><th>Stage</th><th>Submitted</th><th>BGV</th><th>Actions</th></tr></thead><tbody id="oBody"></tbody></table></div></div>
+        </div>
+
+        <!-- ACTIVE -->
+        <div class="page" id="page-active">
+          <div class="page-header"><div><h2>Active Proctors</h2><p>Fully onboarded</p></div></div>
+          <div class="tw"><div class="ox"><table><thead><tr><th>ID</th><th>Name</th><th>Vendor</th><th>Phone</th><th>Activated</th><th>Actions</th></tr></thead><tbody id="aBody"></tbody></table></div></div>
+        </div>
+
+        <!-- OFFBOARDED -->
+        <div class="page" id="page-offboarded">
+          <div class="page-header"><div><h2>Offboarded</h2><p>Inactive — records retained permanently</p></div></div>
+          <div class="tw"><div class="ox"><table><thead><tr><th>ID</th><th>Name</th><th>Vendor</th><th>Offboarded</th><th>Reason</th><th>Actions</th></tr></thead><tbody id="offBody"></tbody></table></div></div>
+        </div>
+
+        <!-- ADD PROCTOR -->
+        <div class="page" id="page-addProctor">
+          <div class="page-header"><div><h2>Add New Proctor</h2><p>BGV and Notes are optional — all other fields required</p></div></div>
+          <div style="max-width:720px;">
+            <div class="tw" style="padding:24px;">
+              <div class="sec-t">Personal Details</div>
+              <div class="fg2" style="margin-bottom:20px;">
+                <div class="form-group"><label>Full Name <span class="req">*</span></label><input id="f_name" placeholder="Full legal name"/><div class="field-error" id="e_name"></div></div>
+                <div class="form-group"><label>Aadhaar Number <span class="req">*</span></label><input id="f_aadhaar" placeholder="12-digit Aadhaar" maxlength="12"/><div class="field-error" id="e_aadhaar"></div></div>
+                <div class="form-group"><label>Date of Birth <span class="req">*</span></label><input id="f_dob" type="date"/><div class="field-error" id="e_dob"></div></div>
+                <div class="form-group"><label>Gender <span class="req">*</span></label><select id="f_gender"><option value="">Select</option><option>Male</option><option>Female</option><option>Other</option></select><div class="field-error" id="e_gender"></div></div>
+                <div class="form-group"><label>Vendor <span class="req">*</span></label>
+                  <select id="f_vendor"><option value="">Select Vendor</option><option>Sai</option><option>TSN</option><option>Avner</option><option>A&M</option><option>Atura</option><option>Awign</option></select>
+                  <div class="field-error" id="e_vendor"></div>
+                </div>
+              </div>
+              <div class="sec-t">Contact Details</div>
+              <div class="fg2" style="margin-bottom:20px;">
+                <div class="form-group"><label>Mobile Number <span class="req">*</span></label><input id="f_phone" placeholder="10 digits" maxlength="10"/><div class="field-error" id="e_phone"></div></div>
+                <div class="form-group"><label>Gmail Address <span class="req">*</span></label><input id="f_email" type="email" placeholder="name@gmail.com"/><div class="field-error" id="e_email"></div></div>
+                <div class="form-group fs2"><label>Address <span class="req">*</span></label><input id="f_address" placeholder="Full address"/><div class="field-error" id="e_address"></div></div>
+                <div class="form-group"><label>City <span class="req">*</span></label><input id="f_city" placeholder="City"/><div class="field-error" id="e_city"></div></div>
+                <div class="form-group"><label>State <span class="req">*</span></label><input id="f_state" placeholder="State"/><div class="field-error" id="e_state"></div></div>
+              </div>
+              <div class="sec-t">Document Links (SharePoint / OneDrive)</div>
+              <div class="al al-i">📎 Paste the SharePoint / OneDrive link to the document. BGV can be left blank and added later from the Incomplete tab.</div>
+              <div class="fg2" style="margin-bottom:20px;">
+                <div class="form-group"><label>BGV Document Link <span class="opt">(Optional — add later)</span></label><input id="f_bgv" placeholder="https://...sharepoint.com/..."/></div>
+                <div class="form-group"><label>NDA Document Link <span class="req">*</span></label><input id="f_nda" placeholder="https://...sharepoint.com/..."/><div class="field-error" id="e_nda"></div></div>
+              </div>
+              <div class="sec-t">Additional Notes</div>
+              <div class="form-group" style="margin-bottom:24px;"><label>Notes <span class="opt">(Optional)</span></label><textarea id="f_notes" rows="3" placeholder="Any relevant notes about this proctor..."></textarea></div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button class="btn btn-primary" onclick="submitProctor()">✅ Submit for Onboarding</button>
+                <button class="btn btn-ghost" onclick="clearForm()">Clear</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MY PROCTORS (vendor uploader / talview view) -->
+        <div class="page" id="page-myProctors">
+          <div class="page-header"><div><h2 id="myPTitle">My Proctors</h2><p id="myPSub">Proctors under your vendor</p></div></div>
+          <div class="tw">
+            <div class="ttb">
+              <input class="si" placeholder="Search name, Aadhaar, phone..." id="sMyPro" oninput="renderMyPro()"/>
+              <select class="fsel" id="fMySt" onchange="renderMyPro()"><option value="">All Status</option><option>In Progress</option><option>Verified</option><option>Active</option><option>Offboarded</option></select>
+              <span class="tc2" id="myPCnt"></span>
+              <div id="myPExportBtn"></div>
+            </div>
+            <div class="ox"><table><thead><tr><th>Name</th><th>Aadhaar</th><th>Vendor</th><th>Phone</th><th>Status</th><th>BGV</th><th>Submitted</th><th>Actions</th></tr></thead><tbody id="myPBody"></tbody></table></div>
+          </div>
+        </div>
+
+        <!-- INCOMPLETE -->
+        <div class="page" id="page-incomplete">
+          <div class="page-header"><div><h2>Incomplete Proctor Details</h2><p>Your submissions missing the BGV document</p></div></div>
+          <div id="incList"></div>
+        </div>
+
+        <!-- BULK UPLOAD -->
+        <div class="page" id="page-bulkUpload">
+          <div class="page-header"><div><h2>Bulk Upload</h2><p>Upload multiple proctors via CSV</p></div></div>
+          <div style="max-width:680px;">
+            <div class="tw" style="padding:24px;">
+              <div class="sec-t">Step 1 — Download Template</div>
+              <p style="color:var(--text2);font-size:13px;margin-bottom:12px;">Fill in the template. BGV link and Notes are optional.</p>
+              <button class="btn btn-ghost" onclick="dlTpl()" style="margin-bottom:24px;">⬇ Download CSV Template</button>
+              <div class="sec-t">Step 2 — Upload File</div>
+              <div class="upzone" onclick="document.getElementById('bFile').click()">
+                <div class="upi">📤</div>
+                <p><span>Click to upload</span> or drag and drop</p>
+                <p style="margin-top:6px;font-size:12px;color:var(--text3)">CSV files only</p>
+              </div>
+              <input type="file" id="bFile" accept=".csv" style="display:none" onchange="handleBulk(event)"/>
+              <div id="bPrev" style="margin-top:20px;"></div>
+              <div id="bAct" style="margin-top:16px;display:none;">
+                <button class="btn btn-primary" onclick="confirmBulk()">✅ Confirm Upload</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AUDIT LOG -->
+        <div class="page" id="page-audit">
+          <div class="page-header"><div><h2>Audit Log</h2><p>Complete action trail</p></div></div>
+          <div class="tw">
+            <div class="ttb">
+              <input class="si" placeholder="🔍 Search..." id="sAud" oninput="renderAudit()"/>
+              <select class="fsel" id="fAud" onchange="renderAudit()"><option value="">All Actions</option><option>Created</option><option>Updated</option><option>BGV Added</option><option>Verified</option><option>ID Assigned</option><option>Offboarded</option><option>Login</option></select>
+              <span class="tc2" id="aCnt"></span>
+            </div>
+            <div class="ox"><table><thead><tr><th>Timestamp</th><th>User</th><th>Action</th><th>Target</th><th>Details</th></tr></thead><tbody id="audBody"></tbody></table></div>
+          </div>
+        </div>
+
+        <!-- CREDENTIALS -->
+        <div class="page" id="page-credentials">
+          <div class="page-header"><div><h2>System Credentials</h2><p>All login accounts and role assignments</p></div></div>
+          <div style="max-width:700px;" id="credContent"></div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="mo" id="mDet"><div class="modal mlg">
+  <div class="mh"><h3 id="mDTl">Details</h3><button class="mcl" onclick="cm('mDet')">×</button></div>
+  <div class="mb" id="mDBd"></div>
+  <div class="mf" id="mDFt"></div>
+</div></div>
+
+<div class="mo" id="mBGV"><div class="modal msm">
+  <div class="mh"><h3>Add BGV Document</h3><button class="mcl" onclick="cm('mBGV')">×</button></div>
+  <div class="mb">
+    <div class="al al-i">You may only add the BGV link here. No other fields can be changed.</div>
+    <p id="bgvNm" style="font-weight:700;margin-bottom:16px;color:var(--text);"></p>
+    <div class="form-group"><label>BGV Document Link <span class="req">*</span></label><input id="bgvLk" placeholder="https://...sharepoint.com/..."/></div>
+  </div>
+  <div class="mf"><button class="btn btn-ghost" onclick="cm('mBGV')">Cancel</button><button class="btn btn-primary" onclick="saveBGV()">💾 Save BGV Link</button></div>
+</div></div>
+
+<div class="mo" id="mVer"><div class="modal msm">
+  <div class="mh"><h3>Verify Proctor</h3><button class="mcl" onclick="cm('mVer')">×</button></div>
+  <div class="mb">
+    <div class="al al-w">⚠️ Ensure all documents are reviewed before verifying.</div>
+    <p id="vNm" style="font-weight:600;font-size:15px;margin:12px 0;color:var(--text);"></p>
+    <div class="form-group"><label>Verification Notes</label><textarea id="vNt" rows="3" placeholder="Notes..."></textarea></div>
+  </div>
+  <div class="mf"><button class="btn btn-ghost" onclick="cm('mVer')">Cancel</button><button class="btn btn-success" onclick="confirmVerify()">✅ Confirm</button></div>
+</div></div>
+
+<div class="mo" id="mAsg"><div class="modal msm">
+  <div class="mh"><h3>Assign Proctor ID</h3><button class="mcl" onclick="cm('mAsg')">×</button></div>
+  <div class="mb">
+    <div class="al al-i">🎯 Final step — assigns ID and marks proctor as <strong>Active</strong>.</div>
+    <p id="aNm" style="font-weight:600;margin:12px 0;color:var(--text);"></p>
+    <div class="form-group"><label>Generated ID</label><input id="aId" readonly style="font-family:'DM Mono',monospace;font-size:16px;font-weight:700;color:var(--accent);background:var(--surface3);"/></div>
+  </div>
+  <div class="mf"><button class="btn btn-ghost" onclick="cm('mAsg')">Cancel</button><button class="btn btn-primary" onclick="confirmAssign()">🎯 Assign &amp; Activate</button></div>
+</div></div>
+
+<div class="mo" id="mOff"><div class="modal msm">
+  <div class="mh"><h3>Offboard Proctor</h3><button class="mcl" onclick="cm('mOff')">×</button></div>
+  <div class="mb">
+    <div class="al al-w">⚠️ Proctor will be marked Inactive. Records kept permanently.</div>
+    <p id="ofNm" style="font-weight:600;margin:12px 0;color:var(--text);"></p>
+    <div class="form-group"><label>Reason <span class="req">*</span></label><select id="ofRs"><option value="">Select</option><option>Contract ended</option><option>Resignation</option><option>Policy violation</option><option>Performance issues</option><option>Other</option></select></div>
+    <div class="form-group"><label>Notes</label><textarea id="ofNt" rows="3" placeholder="Additional notes..."></textarea></div>
+  </div>
+  <div class="mf"><button class="btn btn-ghost" onclick="cm('mOff')">Cancel</button><button class="btn btn-danger" onclick="confirmOff()">🚪 Confirm Offboard</button></div>
+</div></div>
+
+<div class="mo" id="mEdt"><div class="modal mlg">
+  <div class="mh"><h3>Edit Proctor</h3><button class="mcl" onclick="cm('mEdt')">×</button></div>
+  <div class="mb" id="edBd"></div>
+  <div class="mf"><button class="btn btn-ghost" onclick="cm('mEdt')">Cancel</button><button class="btn btn-primary" onclick="saveEdit()">💾 Save Changes</button></div>
+</div></div>
+
+<div id="toasts"></div>
+
+<script>
+// ══════════════════════════════════════════════════
+// PRODUCTION CREDENTIALS
+// ══════════════════════════════════════════════════
+const VENDORS=['Sai','TSN','Avner','A&M','Atura','Awign'];
+const VC={'Sai':'SAI','TSN':'TSN','Avner':'AVN','A&M':'ANM','Atura':'ATU','Awign':'AWG'};
+const VCL={'Sai':'v-sai','TSN':'v-tsn','Avner':'v-avn','A&M':'v-anm','Atura':'v-atu','Awign':'v-awg'};
+
+const USERS={
+  Talview_Admin:    {pw:'fi3beErt', role:'admin',    name:'Talview Admin',     disp:'Administrator',            vendor:null,  locked:false},
+  Talview_Uploader: {pw:'MfcuVB5n', role:'talview',  name:'Talview Uploader',  disp:'Talview — Internal Upload', vendor:null,  locked:false},
+  Sai_Uploader:     {pw:'x9Jv8VQ4', role:'uploader', name:'SAI Uploader',      disp:'Vendor Uploader — Sai',     vendor:'Sai',   locked:true},
+  TSN_Uploader:     {pw:'EZSCgCqS', role:'uploader', name:'TSN Uploader',      disp:'Vendor Uploader — TSN',     vendor:'TSN',   locked:true},
+  Avner_Uploader:   {pw:'wikZJLBH', role:'uploader', name:'Avner Uploader',    disp:'Vendor Uploader — Avner',   vendor:'Avner', locked:true},
+  Atura_Uploader:   {pw:'37Js2WeV', role:'uploader', name:'Atura Uploader',    disp:'Vendor Uploader — Atura',   vendor:'Atura', locked:true},
+  AM_Uploader:      {pw:'swxfZtxQ', role:'uploader', name:'A&M Uploader',      disp:'Vendor Uploader — A&M',     vendor:'A&M',   locked:true},
+  Awign_Uploader:   {pw:'A93mMNpD', role:'uploader', name:'Awign Uploader',    disp:'Vendor Uploader — Awign',   vendor:'Awign', locked:true},
+};
+
+let CU=null,proctors=[],logs=[],CA={},bulkVal=[];
+
+// ══════════════════════════════════════════════════
+// GOOGLE SHEETS CONFIG — fill in your values here
+// ══════════════════════════════════════════════════
+const GS_CONFIG = {
+  // ↓ Paste your Apps Script Web App URL here after deploying
+  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzzWbpt2C_MaFldQ8BG2gKQX40UxbSaOil3Z35EtausHeEkJQ3AWaXYjM7gLzEI3Aw5/exec',
+  // Sheet ID kept for reference (used by Apps Script, not the portal directly)
+  SHEET_ID:        '1o-QtcOkTq5f5kxcpiCttcvkOhDeH2n32eLX6uAMLpdM',
+};
+
+// Column order in Proctors sheet (A→)
+const P_COLS = ['id','pid','name','aadhaar','vendor','phone','email','address','city','state',
+  'dob','gender','bgv','nda','notes','status','stage','by','at','upd','vby','vat','aat','oat','or','on'];
+
+// Column order in AuditLog sheet (A→)
+const L_COLS = ['id','ts','user','action','target','det'];
+
+// ── Helper: row array ↔ object ────────────────────
+
+function rowToObj(cols, row) {
+  const obj = {};
+  cols.forEach((c,i) => obj[c] = row[i] || '');
+  if(obj.stage !== undefined) obj.stage = parseInt(obj.stage)||1;
+  return obj;
+}
+
+function objToRow(cols, obj) {
+  return cols.map(c => (obj[c] === null || obj[c] === undefined) ? '' : String(obj[c]));
+}
+
+// ── Apps Script middleware calls ───────────────────
+// All read/write goes through your deployed Apps Script Web App
+// which handles CORS and talks to the Sheet server-side.
+
+async function gasCall(action, payload={}) {
+  if(!GS_CONFIG.APPS_SCRIPT_URL || GS_CONFIG.APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL') {
+    throw new Error('Apps Script URL not configured');
+  }
+  const url = GS_CONFIG.APPS_SCRIPT_URL;
+  const body = JSON.stringify({action, ...payload});
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'text/plain'}, // text/plain avoids CORS preflight
+    body
+  });
+  if(!r.ok) throw new Error('Apps Script call failed: ' + r.status);
+  const d = await r.json();
+  if(d.error) throw new Error(d.error);
+  return d;
+}
+
+// ── High-level data functions ──────────────────────
+
+async function loadData() {
+  showLoading(true);
+  try {
+    const d = await gasCall('loadAll');
+    proctors = (d.proctors||[]).map(r => rowToObj(P_COLS, r));
+    logs     = (d.logs||[]).map(r => rowToObj(L_COLS, r));
+    // Override USERS from Credentials sheet if present
+    (d.credentials||[]).forEach(r => {
+      const [un,pw,role,name,disp,vendor,locked] = r;
+      if(un) USERS[un] = {pw,role,name,disp,vendor:vendor||null,locked:locked==='true'};
+    });
+    // Cache locally as offline fallback
+    localStorage.setItem('pp_proctors_cache', JSON.stringify(proctors));
+    localStorage.setItem('pp_logs_cache', JSON.stringify(logs));
+  } catch(e) {
+    console.error('loadData error:', e);
+    // Fallback to local cache
+    try {
+      const p=localStorage.getItem('pp_proctors_cache');
+      const l=localStorage.getItem('pp_logs_cache');
+      if(p) proctors=JSON.parse(p);
+      if(l) logs=JSON.parse(l);
+      if(proctors.length) toast('Loaded from local cache — changes will sync when back online','warning');
+      else toast('Cannot connect to Google Sheets. Check your Apps Script URL.','error');
+    } catch(le){ toast('Connection failed and no local cache found.','error'); }
+  }
+  showLoading(false);
+}
+
+async function saveProctor(p, isNew=true) {
+  try {
+    await gasCall(isNew ? 'appendProctor' : 'updateProctor', {row: objToRow(P_COLS, p), id: p.id});
+    localStorage.setItem('pp_proctors_cache', JSON.stringify(proctors));
+  } catch(e) {
+    console.error('saveProctor error:', e);
+    toast('Warning: Could not sync to Google Sheets. Saved locally.','warning');
+    localStorage.setItem('pp_proctors_cache', JSON.stringify(proctors));
+  }
+}
+
+async function saveLog(entry) {
+  try {
+    await gasCall('appendLog', {row: objToRow(L_COLS, entry)});
+    localStorage.setItem('pp_logs_cache', JSON.stringify(logs));
+  } catch(e) {
+    localStorage.setItem('pp_logs_cache', JSON.stringify(logs));
+  }
+}
+
+function showLoading(on) {
+  let el = document.getElementById('loadingOverlay');
+  if(!el) return;
+  el.style.display = on ? 'flex' : 'none';
+}
+
+function clearData(){
+  localStorage.removeItem('pp_proctors_cache');
+  localStorage.removeItem('pp_logs_cache');
+  proctors=[];logs=[];
+}
+
+// ══════════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════════
+async function doLogin(){
+  const u=document.getElementById('lu').value.trim();
+  const p=document.getElementById('lp').value;
+  const err=document.getElementById('lerr');
+  if(!USERS[u]||USERS[u].pw!==p){
+    err.textContent='⚠️ Invalid username or password.';
+    document.getElementById('lp').value='';
+    return;
+  }
+  CU={...USERS[u],un:u};
+  err.textContent='';
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('sAv').textContent=CU.name[0];
+  document.getElementById('sNm').textContent=CU.name;
+  document.getElementById('sRl').textContent=CU.disp;
+  buildNav();
+  showLoading(true);
+  await loadData();
+  await addLog('Login',CU.name,'Signed in as '+CU.role);
+  nav(CU.role==='admin'?'dashboard':'myProctors');
+  badges();
+  toast('Welcome, '+CU.name+'!','success');
+}
+
+function doLogout(){
+  addLog('Logout',CU.name,'Signed out');
+  CU=null;bulkVal=[];
+  // Data stays in localStorage — only clear session state
+  proctors=[];logs=[];
+  document.getElementById('app').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('lu').value='';
+  document.getElementById('lp').value='';
+}
+
+// ══════════════════════════════════════════════════
+// SIDEBAR
+// ══════════════════════════════════════════════════
+function buildNav(){
+  const n=document.getElementById('sNav');
+  if(CU.role==='admin'){
+    n.innerHTML=`
+      <div class="nst">Overview</div>
+      <div class="nav-item" onclick="nav('dashboard')"><span class="icon">📊</span>Dashboard</div>
+      <div class="nst" style="margin-top:8px">Proctors</div>
+      <div class="nav-item" onclick="nav('proctors')"><span class="icon">👥</span>All Proctors<span class="nav-badge" id="nb-all">0</span></div>
+      <div class="nav-item" onclick="nav('onboarding')"><span class="icon">⏳</span>In Progress<span class="nav-badge" id="nb-ip" style="background:var(--warning)">0</span></div>
+      <div class="nav-item" onclick="nav('active')"><span class="icon">✅</span>Active<span class="nav-badge" id="nb-act" style="background:var(--success);color:#000">0</span></div>
+      <div class="nav-item" onclick="nav('offboarded')"><span class="icon">🚪</span>Offboarded</div>
+      <div class="nst" style="margin-top:8px">System</div>
+      <div class="nav-item" onclick="nav('audit')"><span class="icon">📋</span>Audit Log</div>
+      <div class="nav-item" onclick="nav('credentials')"><span class="icon">🔑</span>Credentials</div>`;
+    document.getElementById('tAc').innerHTML='<button class="btn btn-primary btn-sm" onclick="nav(\'onboarding\')">⏳ Review Pending</button>';
+  } else {
+    n.innerHTML=`
+      <div class="nst">My Proctors</div>
+      <div class="nav-item" onclick="nav('myProctors')"><span class="icon">👥</span>All Proctors<span class="nav-badge" id="nb-mine">0</span></div>
+      <div class="nst" style="margin-top:8px">Upload</div>
+      <div class="nav-item" onclick="nav('addProctor')"><span class="icon">➕</span>Add Proctor</div>
+      <div class="nav-item" onclick="nav('bulkUpload')"><span class="icon">📤</span>Bulk Upload</div>
+      <div class="nav-item" onclick="nav('incomplete')"><span class="icon">⚠️</span>Incomplete<span class="nav-badge" id="nb-inc" style="background:var(--warning)">0</span></div>`;
+    document.getElementById('tAc').innerHTML='';
+    setTimeout(applyVendorLock,50);
+  }
+  badges();
+}
+
+function applyVendorLock(){
+  const s=document.getElementById('f_vendor');if(!s)return;
+  if(CU.locked){s.value=CU.vendor;s.disabled=true;}
+  else{s.disabled=false;s.value='';}
+}
+
+// ══════════════════════════════════════════════════
+// NAVIGATE
+// ══════════════════════════════════════════════════
+function nav(pg){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const pe=document.getElementById('page-'+pg);if(pe)pe.classList.add('active');
+  const ni=document.querySelector(`.nav-item[onclick*="'${pg}'"]`);if(ni)ni.classList.add('active');
+  const titles={dashboard:'Dashboard',proctors:'All Proctors',onboarding:'In Progress',active:'Active Proctors',offboarded:'Offboarded',addProctor:'Add New Proctor',bulkUpload:'Bulk Upload',incomplete:'Incomplete Details',audit:'Audit Log',credentials:'System Credentials',myProctors:'All Proctors'};
+  document.getElementById('tTl').textContent=titles[pg]||pg;
+  if(pg==='dashboard')renderDash();
+  if(pg==='proctors')renderPro();
+  if(pg==='onboarding')renderOnboard();
+  if(pg==='active')renderActive();
+  if(pg==='offboarded')renderOff();
+  if(pg==='audit')renderAudit();
+  if(pg==='incomplete')renderInc();
+  if(pg==='myProctors')renderMyPro();
+  if(pg==='credentials')renderCreds();
+  if(pg==='addProctor')setTimeout(applyVendorLock,50);
+  badges();
+}
+
+// ══════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════
+function renderDash(){
+  const tot=proctors.length,ip=proctors.filter(p=>p.status==='In Progress').length,
+    ver=proctors.filter(p=>p.status==='Verified').length,
+    act=proctors.filter(p=>p.status==='Active').length,
+    off=proctors.filter(p=>p.status==='Offboarded').length;
+  document.getElementById('dStats').innerHTML=`
+    <div class="stat-card s-a"><div class="stat-label">Total</div><div class="stat-value">${tot}</div></div>
+    <div class="stat-card s-w"><div class="stat-label">In Progress</div><div class="stat-value">${ip}</div><div class="stat-sub">Pending</div></div>
+    <div class="stat-card s-p"><div class="stat-label">Verified</div><div class="stat-value">${ver}</div><div class="stat-sub">Awaiting ID</div></div>
+    <div class="stat-card s-s"><div class="stat-label">Active</div><div class="stat-value">${act}</div></div>
+    <div class="stat-card s-d"><div class="stat-label">Offboarded</div><div class="stat-value">${off}</div></div>`;
+  document.getElementById('vGrid').innerHTML=VENDORS.map(v=>{
+    const t=proctors.filter(p=>p.vendor===v).length,a=proctors.filter(p=>p.vendor===v&&p.status==='Active').length;
+    return `<div class="vendor-card"><div class="vendor-name">${v}</div><div class="vendor-count">${t}</div><div class="vendor-sub">${a} active</div></div>`;
+  }).join('');
+  const rec=[...proctors].sort((a,b)=>new Date(b.upd)-new Date(a.upd)).slice(0,8);
+  document.getElementById('rBody').innerHTML=rec.length?rec.map(p=>`<tr><td class="tdn">${p.name}</td><td><span class="vb ${VCL[p.vendor]}">${p.vendor}</span></td><td>${sb(p.status)}</td><td style="color:var(--text3);font-size:12px">${fd2(p.upd)}</td></tr>`).join(''):
+    `<tr><td colspan="4"><div class="empty"><div class="ei">📋</div><h3>No activity yet</h3></div></td></tr>`;
+}
+
+// ══════════════════════════════════════════════════
+// TABLES
+// ══════════════════════════════════════════════════
+function renderPro(){
+  const s=(document.getElementById('sPro')?.value||'').toLowerCase();
+  const v=document.getElementById('fVen')?.value||'';
+  const st=document.getElementById('fSt')?.value||'';
+  let f=proctors.filter(p=>{
+    const ms=!s||p.name.toLowerCase().includes(s)||(p.pid||'').toLowerCase().includes(s)||(p.aadhaar||'').includes(s);
+    return ms&&(!v||p.vendor===v)&&(!st||p.status===st);
+  });
+  document.getElementById('pCnt').textContent=f.length+' records';
+  document.getElementById('pBody').innerHTML=f.map(p=>`<tr>
+    <td class="tdi">${p.pid||'—'}</td><td class="tdn">${p.name}</td>
+    <td style="font-family:'DM Mono',monospace;font-size:12px">${mask(p.aadhaar)}</td>
+    <td><span class="vb ${VCL[p.vendor]}">${p.vendor}</span></td>
+    <td style="font-family:'DM Mono',monospace;font-size:12px">${p.phone}</td>
+    <td>${sb(p.status)}</td><td style="color:var(--text3);font-size:12px">${fd2(p.at)}</td>
+    <td><div class="ag">
+      <button class="btn btn-ghost btn-sm" onclick="viewP('${p.id}')">👁 View</button>
+      ${p.status!=='Offboarded'?`<button class="btn btn-ghost btn-sm" onclick="editP('${p.id}')">✏️ Edit</button>`:''}
+    </div></td></tr>`).join('')||er(8,'No records found');
+}
+
+function renderOnboard(){
+  const list=proctors.filter(p=>p.status==='In Progress'||p.status==='Verified');
+  document.getElementById('oBody').innerHTML=list.map(p=>`<tr>
+    <td class="tdn">${p.name}</td><td><span class="vb ${VCL[p.vendor]}">${p.vendor}</span></td>
+    <td style="font-family:'DM Mono',monospace;font-size:12px">${mask(p.aadhaar)}</td>
+    <td>${sb(p.status)}</td><td style="color:var(--text3);font-size:12px">${fd2(p.at)}</td>
+    <td>${p.bgv?'<span style="color:var(--success)">✅ Uploaded</span>':'<span style="color:var(--warning)">⚠️ Missing</span>'}</td>
+    <td><div class="ag">
+      <button class="btn btn-ghost btn-sm" onclick="viewP('${p.id}')">👁 View</button>
+      ${p.status==='In Progress'?`<button class="btn btn-success btn-sm" onclick="openVerify('${p.id}')">✅ Verify</button>`:''}
+      ${p.status==='Verified'?`<button class="btn btn-primary btn-sm" onclick="openAssign('${p.id}')">🎯 Assign ID</button>`:''}
+    </div></td></tr>`).join('')||er(7,'No pending proctors — all clear!');
+}
+
+function renderActive(){
+  const list=proctors.filter(p=>p.status==='Active');
+  document.getElementById('aBody').innerHTML=list.map(p=>`<tr>
+    <td class="tdi">${p.pid}</td><td class="tdn">${p.name}</td>
+    <td><span class="vb ${VCL[p.vendor]}">${p.vendor}</span></td>
+    <td style="font-family:'DM Mono',monospace;font-size:12px">${p.phone}</td>
+    <td style="color:var(--text3);font-size:12px">${fd2(p.aat)}</td>
+    <td><div class="ag">
+      <button class="btn btn-ghost btn-sm" onclick="viewP('${p.id}')">👁 View</button>
+      <button class="btn btn-danger btn-sm" onclick="openOff('${p.id}')">🚪 Offboard</button>
+    </div></td></tr>`).join('')||er(6,'No active proctors');
+}
+
+function renderOff(){
+  const list=proctors.filter(p=>p.status==='Offboarded');
+  document.getElementById('offBody').innerHTML=list.map(p=>`<tr>
+    <td class="tdi">${p.pid}</td><td class="tdn">${p.name}</td>
+    <td><span class="vb ${VCL[p.vendor]}">${p.vendor}</span></td>
+    <td style="color:var(--text3);font-size:12px">${fd2(p.oat)}</td><td>${p.or}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick="viewP('${p.id}')">👁 View</button></td></tr>`).join('')||er(6,'No offboarded proctors');
+}
+
+function renderAudit(){
+  const s=(document.getElementById('sAud')?.value||'').toLowerCase();
+  const a=document.getElementById('fAud')?.value||'';
+  let f=[...logs].reverse().filter(x=>(!s||x.target.toLowerCase().includes(s)||x.user.toLowerCase().includes(s))&&(!a||x.action===a));
+  document.getElementById('aCnt').textContent=f.length+' entries';
+  const ic={'Created':'📝','Updated':'✏️','BGV Added':'📎','Verified':'✅','ID Assigned':'🎯','Offboarded':'🚪','Login':'🔑','Logout':'⏏'};
+  document.getElementById('audBody').innerHTML=f.map(x=>`<tr>
+    <td style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3)">${fdt(x.ts)}</td>
+    <td style="font-weight:600;color:var(--text)">${x.user}</td>
+    <td>${ic[x.action]||'•'} ${x.action}</td>
+    <td style="color:var(--text2)">${x.target}</td>
+    <td style="color:var(--text3);font-size:12px">${x.det}</td></tr>`).join('')||er(5,'No entries yet');
+}
+
+// ══════════════════════════════════════════════════
+// CREDENTIALS PAGE (admin only)
+// ══════════════════════════════════════════════════
+function renderCreds(){
+  const groups=[
+    {
+      role:'👑 Administrator',color:'var(--accent5)',
+      desc:'Full access — dashboard, all proctors, verify, assign IDs, offboard, edit, audit log.',
+      users:[{un:'Talview_Admin',pw:'fi3beErt',name:'Talview Admin',scope:'All vendors — full control'}]
+    },
+    {
+      role:'🏢 Talview Internal Uploader',color:'var(--accent)',
+      desc:'Can upload proctors for any vendor. Cannot view statistics or other vendor data.',
+      users:[{un:'Talview_Uploader',pw:'MfcuVB5n',name:'Talview Uploader',scope:'Any vendor (selectable on form)'}]
+    },
+    {
+      role:'📤 Vendor Uploaders',color:'var(--warning)',
+      desc:'Each vendor has one dedicated login. Locked to their own vendor — cannot see other vendors\' data.',
+      users:[
+        {un:'Sai_Uploader',    pw:'x9Jv8VQ4',name:'SAI Uploader',   scope:'Sai only'},
+        {un:'TSN_Uploader',    pw:'EZSCgCqS',name:'TSN Uploader',   scope:'TSN only'},
+        {un:'Avner_Uploader',  pw:'wikZJLBH',name:'Avner Uploader', scope:'Avner only'},
+        {un:'Atura_Uploader',  pw:'37Js2WeV',name:'Atura Uploader', scope:'Atura only'},
+        {un:'AM_Uploader',     pw:'swxfZtxQ',name:'A&M Uploader',   scope:'A&M only'},
+        {un:'Awign_Uploader',  pw:'A93mMNpD',name:'Awign Uploader', scope:'Awign only'},
+      ]
+    }
+  ];
+  document.getElementById('credContent').innerHTML=`
+    <div class="al al-w" style="margin-bottom:20px;">🔒 Share each credential only with the intended person. Do not share this page with uploaders.</div>
+    <div class="al al-i" style="margin-bottom:20px;">
+      💾 <strong>Data Storage:</strong> All proctor data is saved to this browser's local storage and survives page refreshes. 
+      Data is stored on <strong>this device only</strong> — other users on different devices have their own copy until SharePoint is connected.<br><br>
+      <button class="btn btn-danger btn-sm" onclick="if(confirm('⚠️ This will permanently delete ALL proctor data from this browser. Are you sure?')){{clearData();toast('All local data cleared','warning');}}">🗑️ Clear All Local Data</button>
+    </div>
+    ${groups.map(g=>`
+      <div style="margin-bottom:24px;">
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px;">${g.role}</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:12px;">${g.desc}</div>
+        ${g.users.map(u=>`
+          <div class="cred-box">
+            <div class="cred-role" style="color:${g.color}">${u.name} — ${u.scope}</div>
+            <div class="cred-row"><span class="cred-label">Username</span><span class="cred-val">${u.un}</span></div>
+            <div class="cred-row"><span class="cred-label">Password</span><span class="cred-val">${u.pw}</span></div>
+          </div>`).join('')}
+      </div>`).join('')}
+    <div class="al al-i">
+      <strong>📊 Google Sheets Backend</strong><br><br>
+      This portal saves all data to Google Sheets in real time. To configure:<br><br>
+      1. Open the HTML file and find <code>GS_CONFIG</code> near the top of the script<br>
+      2. Fill in your <strong>API_KEY</strong> and <strong>SHEET_ID</strong><br>
+      3. Create sheets named <strong>Proctors</strong>, <strong>AuditLog</strong>, and <strong>Credentials</strong> with the correct column headers<br><br>
+      <strong>Vendor credentials</strong> can be managed directly in the <strong>Credentials</strong> sheet — no code changes needed to update passwords or add new vendors.<br><br>
+      <strong>Future upgrade path:</strong> Swap Google Sheets for SharePoint Lists when your IT team is ready — the portal UI stays identical.
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════
+// MY PROCTORS (uploader/talview — filtered to their vendor)
+// ══════════════════════════════════════════════════
+function renderMyPro(){
+  // For locked vendor uploaders — show only their vendor
+  // For talview — show all proctors they submitted
+  const isTalview = CU.role==='talview';
+  const s=(document.getElementById('sMyPro')?.value||'').toLowerCase();
+  const st=document.getElementById('fMySt')?.value||'';
+
+  let f = isTalview
+    ? [...proctors]
+    : proctors.filter(p=>p.vendor===CU.vendor);
+
+  if(s) f=f.filter(p=>p.name.toLowerCase().includes(s)||(p.aadhaar||'').includes(s)||p.phone.includes(s));
+  if(st) f=f.filter(p=>p.status===st);
+
+  const vendorLabel = isTalview ? 'Uploaded by you (all vendors)' : CU.vendor+' vendor proctors';
+  const titleEl=document.getElementById('myPTitle');
+  const subEl=document.getElementById('myPSub');
+  if(titleEl) titleEl.textContent=isTalview?'All Proctors':CU.vendor+' — All Proctors';
+  if(subEl) subEl.textContent=isTalview?'Complete proctor database — all vendors':CU.vendor+' vendor proctors';
+
+  document.getElementById('myPCnt').textContent=f.length+' records';
+  const expBtn=document.getElementById('myPExportBtn');
+  if(expBtn) expBtn.innerHTML=isTalview?'<button class="btn btn-ghost btn-sm" onclick="exportAllCSV()">&#11015; Export All</button>':'';
+  document.getElementById('myPBody').innerHTML=f.map(p=>`<tr>
+    <td class="tdn">${p.name}</td>
+    <td style="font-family:'DM Mono',monospace;font-size:12px">${mask(p.aadhaar)}</td>
+    <td><span class="vb ${VCL[p.vendor]}">${p.vendor}</span></td>
+    <td style="font-family:'DM Mono',monospace;font-size:12px">${p.phone}</td>
+    <td>${sb(p.status)}</td>
+    <td>${p.bgv?'<span style="color:var(--success)">✅ Uploaded</span>':'<span style="color:var(--warning)">⚠️ Missing</span>'}</td>
+    <td style="color:var(--text3);font-size:12px">${fd2(p.at)}</td>
+    <td><div class="ag">
+      <button class="btn btn-ghost btn-sm" onclick="viewP('${p.id}')">👁 View</button>
+      ${!p.bgv&&p.status!=='Offboarded'?`<button class="btn btn-primary btn-sm" onclick="openBGV('${p.id}')">📎 Add BGV</button>`:''}
+    </div></td></tr>`).join('')||er(8,'No proctors found');
+}
+
+// ══════════════════════════════════════════════════
+// INCOMPLETE TAB
+// ══════════════════════════════════════════════════
+function renderInc(){
+  const mine=proctors.filter(p=>p.by===CU.un&&!p.bgv&&p.status!=='Offboarded');
+  const el=document.getElementById('incList');
+  if(!mine.length){el.innerHTML=`<div class="empty"><div class="ei">✅</div><h3>All complete!</h3><p>No proctors with missing BGV documents.</p></div>`;return;}
+  el.innerHTML=mine.map(p=>`<div class="inc-card">
+    <div style="flex:1;">
+      <div class="inc-name">${p.name}</div>
+      <div class="inc-meta"><span class="vb ${VCL[p.vendor]}" style="margin-right:8px;">${p.vendor}</span>Aadhaar: ${mask(p.aadhaar)} · Phone: ${p.phone} · Added: ${fd2(p.at)}</div>
+      <div style="margin-top:6px;">${sb(p.status)} <span style="color:var(--danger);font-size:12px;margin-left:8px;">⚠️ BGV document missing</span></div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="openBGV('${p.id}')">📎 Add BGV</button>
+  </div>`).join('');
+  badges();
+}
+
+function openBGV(id){
+  const p=proctors.find(x=>x.id===id);if(!p)return;
+  CA={bgvId:id};
+  document.getElementById('bgvNm').textContent=p.name+' ('+p.vendor+')';
+  document.getElementById('bgvLk').value='';
+  om('mBGV');
+}
+async function saveBGV(){
+  const lk=document.getElementById('bgvLk').value.trim();
+  if(!lk){toast('Please enter the SharePoint link','error');return;}
+  const p=proctors.find(x=>x.id===CA.bgvId);if(!p)return;
+  p.bgv=lk;p.upd=new Date().toISOString();
+  showLoading(true);
+  await saveProctor(p, false);
+  await addLog('BGV Added',p.name,'BGV link added by '+CU.un);
+  showLoading(false);
+  cm('mBGV');toast('BGV document added for '+p.name,'success');
+  renderInc();badges();
+}
+
+// ══════════════════════════════════════════════════
+// VIEW PROCTOR
+// ══════════════════════════════════════════════════
+function viewP(id){
+  const p=proctors.find(x=>x.id===id);if(!p)return;
+  const isA=CU.role==='admin';
+  const steps=[{l:'Uploaded',d:true,c:p.stage===1},{l:'Verified',d:p.stage>=2,c:p.stage===2},{l:'ID & Active',d:p.stage>=3,c:p.stage===3}];
+  const wf='<div class="wf">'+steps.map((s,i)=>`<div class="wfs ${s.d?'done':s.c?'cur':''}"><div class="wfc">${s.d?'✓':i+1}</div><div class="wfl">${s.l}</div></div>${i<2?`<div class="wfcon ${steps[i+1].d?'done':''}"></div>`:''}`).join('')+'</div>';
+  document.getElementById('mDTl').textContent=p.name+(p.pid?' — '+p.pid:'');
+  document.getElementById('mDBd').innerHTML=`${wf}
+    <div class="tabs" id="dtabs">
+      <div class="tab active" onclick="dtab(0)">Personal</div>
+      <div class="tab" onclick="dtab(1)">Documents</div>
+      <div class="tab" onclick="dtab(2)">History</div>
+    </div>
+    <div id="dt0"><div class="dg">
+      <div class="di"><label>Full Name</label><div class="val">${p.name}</div></div>
+      <div class="di"><label>Proctor ID</label><div class="val" style="font-family:'DM Mono',monospace;color:var(--accent)">${p.pid||'Not assigned yet'}</div></div>
+      <div class="di"><label>Aadhaar</label><div class="val" style="font-family:'DM Mono',monospace">${isA?p.aadhaar:mask(p.aadhaar)}</div></div>
+      <div class="di"><label>Vendor</label><div class="val"><span class="vb ${VCL[p.vendor]}">${p.vendor}</span></div></div>
+      <div class="di"><label>Status</label><div class="val">${sb(p.status)}</div></div>
+      <div class="di"><label>DOB</label><div class="val">${p.dob||'—'}</div></div>
+      <div class="di"><label>Gender</label><div class="val">${p.gender||'—'}</div></div>
+      <div class="di"><label>Phone</label><div class="val">${p.phone}</div></div>
+      <div class="di"><label>Email</label><div class="val">${p.email||'—'}</div></div>
+      <div class="di" style="grid-column:span 2"><label>Address</label><div class="val">${[p.address,p.city,p.state].filter(Boolean).join(', ')||'—'}</div></div>
+      <div class="di"><label>Created By</label><div class="val">${p.by} · ${fd2(p.at)}</div></div>
+      ${p.vby?`<div class="di"><label>Verified By</label><div class="val">${p.vby} · ${fd2(p.vat)}</div></div>`:''}
+      ${p.aat?`<div class="di"><label>Activated</label><div class="val">${fd2(p.aat)}</div></div>`:''}
+      ${p.oat?`<div class="di"><label>Offboarded</label><div class="val" style="color:var(--danger)">${fd2(p.oat)} — ${p.or}</div></div>`:''}
+      ${p.notes?`<div class="di" style="grid-column:span 2"><label>Notes</label><div class="val">${p.notes}</div></div>`:''}
+    </div></div>
+    <div id="dt1" style="display:none"><div class="dg">
+      <div class="di"><label>BGV Document</label><div class="val">${p.bgv?`<a class="doclink" href="${p.bgv}" target="_blank">📄 Open BGV ↗</a>`:'<span style="color:var(--warning)">⚠️ Not uploaded yet</span>'}</div></div>
+      <div class="di"><label>NDA Document</label><div class="val">${p.nda?`<a class="doclink" href="${p.nda}" target="_blank">📄 Open NDA ↗</a>`:'—'}</div></div>
+    </div><div class="al al-i" style="margin-top:16px">📌 Links open your SharePoint / OneDrive document.</div></div>
+    <div id="dt2" style="display:none"><div class="tline">${tline(p)}</div></div>`;
+  document.getElementById('mDFt').innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;">
+    ${isA&&p.status!=='Offboarded'?`<button class="btn btn-ghost btn-sm" onclick="cm('mDet');editP('${p.id}')">✏️ Edit</button>`:''}
+    ${isA&&p.status==='In Progress'?`<button class="btn btn-success btn-sm" onclick="cm('mDet');openVerify('${p.id}')">✅ Verify</button>`:''}
+    ${isA&&p.status==='Verified'?`<button class="btn btn-primary btn-sm" onclick="cm('mDet');openAssign('${p.id}')">🎯 Assign ID</button>`:''}
+    ${isA&&p.status==='Active'?`<button class="btn btn-danger btn-sm" onclick="cm('mDet');openOff('${p.id}')">🚪 Offboard</button>`:''}
+    <button class="btn btn-ghost btn-sm" onclick="cm('mDet')">Close</button>
+  </div>`;
+  om('mDet');
+}
+
+function dtab(i){
+  document.querySelectorAll('#dtabs .tab').forEach((t,j)=>t.classList.toggle('active',i===j));
+  [0,1,2].forEach(j=>{const e=document.getElementById('dt'+j);if(e)e.style.display=i===j?'':'none';});
+}
+
+function tline(p){
+  const e=logs.filter(a=>a.target===p.name).sort((a,b)=>new Date(a.ts)-new Date(b.ts));
+  if(!e.length)return'<p style="color:var(--text3)">No audit entries yet.</p>';
+  const ic={'Created':'📝','Updated':'✏️','BGV Added':'📎','Verified':'✅','ID Assigned':'🎯','Offboarded':'🚪'};
+  return e.map(x=>`<div class="tline-item"><div class="tline-dot">${ic[x.action]||'•'}</div><div class="tline-b"><div class="tline-a">${x.action}</div><div class="tline-m">${x.user} · ${fdt(x.ts)}</div><div style="font-size:12px;color:var(--text2);margin-top:3px">${x.det}</div></div></div>`).join('');
+}
+
+// ══════════════════════════════════════════════════
+// EDIT
+// ══════════════════════════════════════════════════
+function editP(id){
+  if(CU.role!=='admin'){toast('No permission','error');return;}
+  const p=proctors.find(x=>x.id===id);if(!p)return;
+  CA={editId:id};
+  document.getElementById('edBd').innerHTML=`
+    <div class="sec-t">Personal</div>
+    <div class="fg2" style="margin-bottom:16px;">
+      <div class="form-group"><label>Name <span class="req">*</span></label><input id="ef_n" value="${p.name}"/></div>
+      <div class="form-group"><label>Aadhaar <span class="req">*</span></label><input id="ef_a" value="${p.aadhaar}" maxlength="12"/></div>
+      <div class="form-group"><label>DOB</label><input id="ef_d" type="date" value="${p.dob||''}"/></div>
+      <div class="form-group"><label>Gender</label><select id="ef_g"><option value="">Select</option>${['Male','Female','Other'].map(g=>`<option ${p.gender===g?'selected':''}>${g}</option>`).join('')}</select></div>
+      <div class="form-group"><label>Vendor</label><select id="ef_v">${VENDORS.map(v=>`<option ${p.vendor===v?'selected':''}>${v}</option>`).join('')}</select></div>
+    </div>
+    <div class="sec-t">Contact</div>
+    <div class="fg2" style="margin-bottom:16px;">
+      <div class="form-group"><label>Phone</label><input id="ef_ph" value="${p.phone}"/></div>
+      <div class="form-group"><label>Email</label><input id="ef_em" value="${p.email||''}"/></div>
+      <div class="form-group fs2"><label>Address</label><input id="ef_ad" value="${p.address||''}"/></div>
+      <div class="form-group"><label>City</label><input id="ef_ci" value="${p.city||''}"/></div>
+      <div class="form-group"><label>State</label><input id="ef_st" value="${p.state||''}"/></div>
+    </div>
+    <div class="sec-t">Documents</div>
+    <div class="fg2" style="margin-bottom:16px;">
+      <div class="form-group"><label>BGV Link</label><input id="ef_bg" value="${p.bgv||''}"/></div>
+      <div class="form-group"><label>NDA Link</label><input id="ef_nd" value="${p.nda||''}"/></div>
+    </div>
+    <div class="form-group"><label>Notes</label><textarea id="ef_no" rows="3">${p.notes||''}</textarea></div>`;
+  om('mEdt');
+}
+async function saveEdit(){
+  const id=CA.editId,p=proctors.find(x=>x.id===id);if(!p)return;
+  const name=gv('ef_n'),aadhaar=gv('ef_a');
+  if(!name){toast('Name is required','error');return;}
+  if(aadhaar&&proctors.some(x=>x.id!==id&&x.aadhaar===aadhaar)){toast('Aadhaar already exists for another proctor','error');return;}
+  p.name=name;p.aadhaar=aadhaar;p.dob=gv('ef_d');p.gender=gv('ef_g');p.vendor=gv('ef_v');
+  p.phone=gv('ef_ph');p.email=gv('ef_em');p.address=gv('ef_ad');p.city=gv('ef_ci');p.state=gv('ef_st');
+  p.bgv=gv('ef_bg');p.nda=gv('ef_nd');p.notes=gv('ef_no');p.upd=new Date().toISOString();
+  showLoading(true);
+  await saveProctor(p, false);
+  await addLog('Updated',p.name,'Record updated by '+CU.un);
+  showLoading(false);
+  cm('mEdt');toast('Changes saved','success');renderPro();
+}
+
+// ══════════════════════════════════════════════════
+// ADD PROCTOR
+// ══════════════════════════════════════════════════
+function clrErr(){
+  document.querySelectorAll('.field-error').forEach(e=>e.textContent='');
+  document.querySelectorAll('.ef').forEach(e=>e.classList.remove('ef'));
+}
+function setE(fi,ei,msg){
+  const f=document.getElementById(fi),e=document.getElementById(ei);
+  if(f)f.classList.add('ef');if(e)e.textContent=msg;
+}
+
+async function submitProctor(){
+  clrErr();let ok=true;
+  const v=id=>(document.getElementById(id)?.value?.trim()||'');
+  const name=v('f_name'),aadhaar=v('f_aadhaar'),dob=v('f_dob'),gender=v('f_gender'),
+    vendor=CU.locked?CU.vendor:v('f_vendor'),
+    phone=v('f_phone'),email=v('f_email'),address=v('f_address'),
+    city=v('f_city'),state=v('f_state'),nda=v('f_nda');
+
+  if(!name)         {setE('f_name','e_name','Full name is required');ok=false;}
+  if(!aadhaar)      {setE('f_aadhaar','e_aadhaar','Aadhaar is required');ok=false;}
+  else if(!/^\d{12}$/.test(aadhaar)){setE('f_aadhaar','e_aadhaar','Must be exactly 12 digits');ok=false;}
+  if(!dob)          {setE('f_dob','e_dob','Date of Birth is required');ok=false;}
+  if(!gender)       {setE('f_gender','e_gender','Gender is required');ok=false;}
+  if(!vendor)       {setE('f_vendor','e_vendor','Vendor is required');ok=false;}
+  if(!phone)        {setE('f_phone','e_phone','Mobile number is required');ok=false;}
+  else if(!/^\d{10}$/.test(phone)){setE('f_phone','e_phone','Must be 10 digits');ok=false;}
+  if(!email)        {setE('f_email','e_email','Email is required');ok=false;}
+  else if(!email.includes('@')){setE('f_email','e_email','Enter a valid email address');ok=false;}
+  if(!address)      {setE('f_address','e_address','Address is required');ok=false;}
+  if(!city)         {setE('f_city','e_city','City is required');ok=false;}
+  if(!state)        {setE('f_state','e_state','State is required');ok=false;}
+  if(!nda)          {setE('f_nda','e_nda','NDA document link is required');ok=false;}
+  if(!ok)return;
+
+  const da=proctors.find(p=>p.aadhaar===aadhaar);
+  if(da){setE('f_aadhaar','e_aadhaar','⚠️ Duplicate — already exists: '+da.name+' ('+da.vendor+')');return;}
+  const dp=proctors.find(p=>p.phone===phone);
+  if(dp){setE('f_phone','e_phone','⚠️ Duplicate — already exists: '+dp.name+' ('+dp.vendor+')');return;}
+  const de=proctors.find(p=>p.email.toLowerCase()===email.toLowerCase());
+  if(de){setE('f_email','e_email','⚠️ Duplicate — already exists: '+de.name+' ('+de.vendor+')');return;}
+
+  const p={id:'p'+Date.now(),pid:'',name,aadhaar,vendor,phone,email,address,city,state,dob,gender,
+    bgv:v('f_bgv'),nda,notes:v('f_notes'),
+    status:'In Progress',stage:1,by:CU.un,
+    at:new Date().toISOString(),upd:new Date().toISOString(),
+    vby:'',vat:null,aat:null,oat:null,or:'',on:''};
+  proctors.push(p);
+  showLoading(true);
+  await saveProctor(p, true);
+  await addLog('Created',p.name,'Vendor: '+vendor+(CU.role==='talview'?' (via Talview Uploader)':'')+(p.bgv?'':' BGV pending'));
+  showLoading(false);
+  clearForm();
+  toast(name+' added successfully!'+(p.bgv?'':' Add BGV from the Incomplete tab when ready.'),'success');
+  badges();
+  if(!p.bgv)nav('incomplete');else nav('onboarding');
+}
+
+function clearForm(){
+  ['f_name','f_aadhaar','f_dob','f_phone','f_email','f_address','f_city','f_state','f_bgv','f_nda','f_notes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  const g=document.getElementById('f_gender');if(g)g.selectedIndex=0;
+  if(!CU?.locked){const vnd=document.getElementById('f_vendor');if(vnd)vnd.selectedIndex=0;}
+  clrErr();
+}
+
+// ══════════════════════════════════════════════════
+// BULK UPLOAD
+// ══════════════════════════════════════════════════
+function dlTpl(){
+  const h='name,aadhaar,dob,gender,vendor,phone,email,address,city,state,nda_link,bgv_link,notes';
+  const ex='John Doe,123456789012,1990-01-01,Male,Sai,9876543210,john@gmail.com,123 Main St,Mumbai,Maharashtra,https://sharepoint.com/nda,,';
+  const blob=new Blob([h+'\n'+ex],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='proctor_upload_template.csv';a.click();
+  toast('Template downloaded','success');
+}
+
+function handleBulk(e){
+  const file=e.target.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    const lines=ev.target.result.split('\n').map(l=>l.trim()).filter(Boolean);
+    if(lines.length<2){toast('File appears empty','error');return;}
+    const hdrs=lines[0].split(',').map(h=>h.trim().toLowerCase());
+    const raw=lines.slice(1).map(line=>{
+      const vals=line.split(',');const obj={};
+      hdrs.forEach((h,i)=>obj[h]=(vals[i]||'').trim());return obj;
+    }).filter(r=>r.name);
+    validateBulk(raw);
+  };
+  r.readAsText(file);
+}
+
+function validateBulk(raw){
+  const lv=CU.locked?CU.vendor:null;
+  const sA={},sP={},sE={};
+  bulkVal=raw.map((r,idx)=>{
+    const errs=[];
+    if(!r.name)errs.push('Missing name');
+    if(!r.aadhaar||!/^\d{12}$/.test(r.aadhaar))errs.push('Invalid Aadhaar (12 digits required)');
+    if(!r.dob)errs.push('Missing DOB');
+    if(!r.gender)errs.push('Missing gender');
+    const vend=lv||r.vendor;
+    if(!VENDORS.includes(vend))errs.push('Invalid vendor: '+r.vendor);
+    if(!r.phone||!/^\d{10}$/.test(r.phone))errs.push('Invalid phone (10 digits required)');
+    if(!r.email||!r.email.includes('@'))errs.push('Invalid email');
+    if(!r.address)errs.push('Missing address');
+    if(!r.city)errs.push('Missing city');
+    if(!r.state)errs.push('Missing state');
+    if(!r.nda_link)errs.push('Missing NDA link');
+    // bgv_link and notes are optional
+    if(r.aadhaar&&/^\d{12}$/.test(r.aadhaar)){const d=proctors.find(p=>p.aadhaar===r.aadhaar);if(d)errs.push('Duplicate Aadhaar — exists: '+d.name+' ('+d.vendor+')');}
+    if(r.phone&&/^\d{10}$/.test(r.phone)){const d=proctors.find(p=>p.phone===r.phone);if(d)errs.push('Duplicate phone — exists: '+d.name+' ('+d.vendor+')');}
+    if(r.email&&r.email.includes('@')){const d=proctors.find(p=>p.email.toLowerCase()===r.email.toLowerCase());if(d)errs.push('Duplicate email — exists: '+d.name+' ('+d.vendor+')');}
+    const ak=r.aadhaar,pk=r.phone,ek=(r.email||'').toLowerCase();
+    if(ak){if(sA[ak])errs.push('Aadhaar repeated in file (row '+(sA[ak]+1)+')');else sA[ak]=idx+1;}
+    if(pk){if(sP[pk])errs.push('Phone repeated in file (row '+(sP[pk]+1)+')');else sP[pk]=idx+1;}
+    if(ek){if(sE[ek])errs.push('Email repeated in file (row '+(sE[ek]+1)+')');else sE[ek]=idx+1;}
+    return{...r,_v:vend,_ok:errs.length===0,_errs:errs};
+  });
+  renderBulkPrev();
+}
+
+function renderBulkPrev(){
+  const ok=bulkVal.filter(r=>r._ok),sk=bulkVal.filter(r=>!r._ok);
+  let html=`<div class="al ${ok.length?'al-i':'al-d'}">
+    <strong>${bulkVal.length}</strong> rows found —
+    <strong style="color:var(--success)">${ok.length} will be uploaded</strong>
+    ${sk.length?`, <strong style="color:var(--danger)">${sk.length} will be skipped</strong> (duplicate or invalid)`:''}
+  </div>`;
+  if(sk.length){
+    html+=`<div class="al al-d"><strong>⚠️ Skipped rows — these will NOT be uploaded:</strong><br><br>`;
+    sk.forEach(r=>{html+=`<div style="margin-bottom:8px;padding:8px 12px;background:rgba(248,113,113,.07);border-radius:6px;"><strong>${r.name||'(unnamed)'}</strong> — <span style="font-size:12px">${r._errs.join(' · ')}</span></div>`;});
+    html+=`</div>`;
+  }
+  html+=`<div class="tw" style="max-height:260px;overflow-y:auto;"><table><thead><tr><th>#</th><th>Name</th><th>Vendor</th><th>Phone</th><th>Aadhaar</th><th>Result</th></tr></thead><tbody>
+    ${bulkVal.map((r,i)=>`<tr class="${r._ok?'row-ok':'row-sk'}">
+      <td style="color:var(--text3);font-size:12px">${i+1}</td>
+      <td class="tdn">${r.name||'—'}</td><td>${r._v||r.vendor||'—'}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px">${r.phone||'—'}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px">${r.aadhaar?mask(r.aadhaar):'—'}</td>
+      <td><span class="dtag ${r._ok?'dtag-ok':'dtag-sk'}">${r._ok?'✅ Upload':'❌ Skip'}</span></td>
+    </tr>`).join('')}
+  </tbody></table></div>`;
+  document.getElementById('bPrev').innerHTML=html;
+  document.getElementById('bAct').style.display=ok.length?'block':'none';
+}
+
+async function confirmBulk(){
+  const ok=bulkVal.filter(r=>r._ok);if(!ok.length){toast('No valid rows to upload','error');return;}
+  ok.forEach(r=>{
+    const p={id:'p'+Date.now()+Math.random(),pid:'',name:r.name,aadhaar:r.aadhaar,
+      vendor:r._v,phone:r.phone,email:r.email,address:r.address,city:r.city,state:r.state,
+      dob:r.dob,gender:r.gender,bgv:r.bgv_link||'',nda:r.nda_link||'',notes:r.notes||'',
+      status:'In Progress',stage:1,by:CU.un,
+      at:new Date().toISOString(),upd:new Date().toISOString(),
+      vby:'',vat:null,aat:null,oat:null,or:'',on:''};
+    proctors.push(p);
+    addLog('Created',p.name,'Bulk upload. Vendor: '+p.vendor+(CU.role==='talview'?' (via Talview Uploader)':'')+(p.bgv?'':' BGV pending'));
+  });
+  showLoading(true);
+  await Promise.all(ok.map(p2=>saveProctor(p2,true)));
+  showLoading(false);
+  const sk=bulkVal.filter(r=>!r._ok).length;
+  bulkVal=[];
+  document.getElementById('bPrev').innerHTML='';
+  document.getElementById('bAct').style.display='none';
+  document.getElementById('bFile').value='';
+  toast(ok.length+' proctors uploaded!'+(sk?' '+sk+' rows skipped.':''),'success');
+  badges();nav('incomplete');
+}
+
+// ══════════════════════════════════════════════════
+// VERIFY / ASSIGN ID / OFFBOARD
+// ══════════════════════════════════════════════════
+function openVerify(id){
+  if(CU.role!=='admin'){toast('No permission','error');return;}
+  const p=proctors.find(x=>x.id===id);if(!p)return;
+  CA={vId:id};
+  document.getElementById('vNm').textContent=p.name+' ('+p.vendor+')';
+  document.getElementById('vNt').value='';om('mVer');
+}
+async function confirmVerify(){
+  const p=proctors.find(x=>x.id===CA.vId);if(!p)return;
+  p.status='Verified';p.stage=2;p.vby=CU.un;p.vat=new Date().toISOString();p.upd=new Date().toISOString();
+  const n=document.getElementById('vNt').value;
+  showLoading(true);
+  await saveProctor(p, false);
+  await addLog('Verified',p.name,'Verified by '+CU.un+(n?'. Notes: '+n:''));
+  showLoading(false);
+  cm('mVer');toast(p.name+' verified!','success');renderOnboard();badges();
+}
+
+function openAssign(id){
+  if(CU.role!=='admin'){toast('No permission','error');return;}
+  const p=proctors.find(x=>x.id===id);if(!p)return;
+  const code=VC[p.vendor]||p.vendor.substring(0,3).toUpperCase();
+  const cnt=proctors.filter(x=>x.vendor===p.vendor&&x.pid).length;
+  const nid=`${code}-${String(cnt+1).padStart(4,'0')}`;
+  CA={aId:id,gId:nid};
+  document.getElementById('aNm').textContent=p.name+' ('+p.vendor+')';
+  document.getElementById('aId').value=nid;om('mAsg');
+}
+async function confirmAssign(){
+  const p=proctors.find(x=>x.id===CA.aId);if(!p)return;
+  p.pid=CA.gId;p.status='Active';p.stage=3;p.aat=new Date().toISOString();p.upd=new Date().toISOString();
+  showLoading(true);
+  await saveProctor(p, false);
+  await addLog('ID Assigned',p.name,'ID: '+p.pid+' → Active');
+  showLoading(false);
+  cm('mAsg');toast('ID '+p.pid+' assigned! '+p.name+' is now Active.','success');renderOnboard();badges();
+}
+
+function openOff(id){
+  if(CU.role!=='admin'){toast('No permission','error');return;}
+  const p=proctors.find(x=>x.id===id);if(!p)return;
+  CA={oId:id};
+  document.getElementById('ofNm').textContent=p.name+' ('+p.pid+')';
+  document.getElementById('ofRs').selectedIndex=0;
+  document.getElementById('ofNt').value='';om('mOff');
+}
+async function confirmOff(){
+  const rsn=document.getElementById('ofRs').value;
+  if(!rsn){toast('Please select a reason','error');return;}
+  const p=proctors.find(x=>x.id===CA.oId);if(!p)return;
+  p.status='Offboarded';p.oat=new Date().toISOString();p.or=rsn;
+  p.on=document.getElementById('ofNt').value;p.upd=new Date().toISOString();
+  showLoading(true);
+  await saveProctor(p, false);
+  await addLog('Offboarded',p.name,'Reason: '+rsn);
+  showLoading(false);
+  cm('mOff');toast(p.name+' has been offboarded.','info');renderActive();badges();
+}
+
+// ══════════════════════════════════════════════════
+// EXPORT
+// ══════════════════════════════════════════════════
+function exportAllCSV(){
+  const h=['Proctor ID','Name','Aadhaar','Vendor','Phone','Email','City','State','Status','BGV','NDA','Created','Activated','Uploaded By'];
+  const rows=proctors.map(p=>[p.pid||'—',p.name,p.aadhaar,p.vendor,p.phone,p.email||'—',p.city,p.state,p.status,p.bgv?'Yes':'No',p.nda?'Yes':'No',fd2(p.at),p.aat?fd2(p.aat):'—',p.by]);
+  const csv=[h,...rows].map(r=>r.join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='all_proctors_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+  toast('Full export downloaded','success');
+}
+
+function exportCSV(){
+  const h=['Proctor ID','Name','Aadhaar','Vendor','Phone','Email','City','State','Status','Created','Activated'];
+  const rows=proctors.map(p=>[p.pid,p.name,p.aadhaar,p.vendor,p.phone,p.email,p.city,p.state,p.status,fd2(p.at),p.aat?fd2(p.aat):'—']);
+  const csv=[h,...rows].map(r=>r.join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='proctors_export_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+  toast('Export downloaded','success');
+}
+
+// ══════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════
+const gv=id=>document.getElementById(id)?.value?.trim()||'';
+const mask=a=>(!a||a.length<4)?a||'—':'XXXX-XXXX-'+a.slice(-4);
+const sb=s=>{const m={'In Progress':['b-ip'],'Verified':['b-ve'],'Active':['b-ac'],'Offboarded':['b-of']};const[c]=m[s]||[''];return`<span class="badge ${c}"><span class="bdot"></span>${s}</span>`;};
+const fd2=iso=>!iso?'—':new Date(iso).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+const fdt=iso=>!iso?'—':new Date(iso).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+async function addLog(action,target,det){
+  const entry={id:'l'+Date.now(),ts:new Date().toISOString(),user:CU?.un||'system',action,target,det};
+  logs.push(entry);
+  await saveLog(entry);
+}
+const om=id=>document.getElementById(id).classList.add('open');
+const cm=id=>document.getElementById(id).classList.remove('open');
+const er=(c,m)=>`<tr><td colspan="${c}"><div class="empty"><div class="ei">🔍</div><h3>${m}</h3></div></td></tr>`;
+
+function badges(){
+  if(!CU)return;
+  if(CU.role==='admin'){
+    const a=document.getElementById('nb-all');if(a)a.textContent=proctors.length;
+    const b=document.getElementById('nb-ip');if(b)b.textContent=proctors.filter(p=>p.status==='In Progress'||p.status==='Verified').length;
+    const c=document.getElementById('nb-act');if(c)c.textContent=proctors.filter(p=>p.status==='Active').length;
+  } else {
+    const isTalview=CU.role==='talview';
+    const mine = isTalview
+      ? proctors
+      : proctors.filter(p=>p.vendor===CU.vendor);
+    const e=document.getElementById('nb-mine');if(e)e.textContent=mine.length;
+    const f=document.getElementById('nb-inc');
+    if(f)f.textContent=proctors.filter(p=>p.by===CU.un&&!p.bgv&&p.status!=='Offboarded').length;
+  }
+}
+
+function toast(msg,type='info'){
+  const el=document.createElement('div');el.className='toast t-'+type[0];
+  const ic={success:'✅',error:'❌',info:'ℹ️',warning:'⚠️'};
+  el.innerHTML=`<span>${ic[type]||'ℹ️'}</span><span>${msg}</span>`;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(()=>el.remove(),4500);
+}
+
+document.querySelectorAll('.mo').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
+
+// Show config warning on load if not set up
+window.addEventListener('DOMContentLoaded',()=>{
+  if(GS_CONFIG.APPS_SCRIPT_URL==='YOUR_APPS_SCRIPT_URL'){
+    const w=document.getElementById('cfgWarning');
+    if(w)w.style.display='block';
+  }
+});
+</script>
+</body>
+</html>
