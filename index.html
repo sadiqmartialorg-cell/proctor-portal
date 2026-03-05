@@ -485,7 +485,7 @@ let CU=null,proctors=[],logs=[],CA={},bulkVal=[];
 // ══════════════════════════════════════════════════
 const GS_CONFIG = {
   // ↓ Paste your Apps Script Web App URL here after deploying
-  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzzWbpt2C_MaFldQ8BG2gKQX40UxbSaOil3Z35EtausHeEkJQ3AWaXYjM7gLzEI3Aw5/exec',
+  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwEgyy9oS8IQpz1xW5ixSO0HADDQ1NyvUwMNTGDec76t97TXmkJrGqwXHaRNe8IeIDD/exec',
   // Sheet ID kept for reference (used by Apps Script, not the portal directly)
   SHEET_ID:        '1o-QtcOkTq5f5kxcpiCttcvkOhDeH2n32eLX6uAMLpdM',
 };
@@ -1111,6 +1111,8 @@ async function submitProctor(){
   toast(name+' added successfully!'+(p.bgv?'':' Add BGV from the Incomplete tab when ready.'),'success');
   badges();
   if(!p.bgv)nav('incomplete');else nav('onboarding');
+  // Refresh from Sheets in background so all users see update
+  silentRefresh();
 }
 
 function clearForm(){
@@ -1215,15 +1217,27 @@ async function confirmBulk(){
     addLog('Created',p.name,'Bulk upload. Vendor: '+p.vendor+(CU.role==='talview'?' (via Talview Uploader)':'')+(p.bgv?'':' BGV pending'));
   });
   showLoading(true);
-  await Promise.all(ok.map(p2=>saveProctor(p2,true)));
+  // Send all rows in ONE batch call instead of individual requests
+  try {
+    const rows = ok.map(p2 => objToRow(P_COLS, p2));
+    await gasCall('batchAppendProctors', {rows});
+    // Also log each creation (fire and forget)
+    ok.forEach(p2 => addLog('Created', p2.name, 'Bulk upload. Vendor: '+p2.vendor+(CU.role==='talview'?' (via Talview Uploader)':'')+(p2.bgv?'':' BGV pending')));
+    localStorage.setItem('pp_proctors_cache', JSON.stringify(proctors));
+    toast(ok.length+' proctors uploaded to Google Sheets!'+(sk?' '+sk+' rows skipped.':''),'success');
+  } catch(e) {
+    console.error('Bulk upload error:', e);
+    localStorage.setItem('pp_proctors_cache', JSON.stringify(proctors));
+    toast(ok.length+' proctors saved locally. Sheets sync failed — will retry.','warning');
+  }
   showLoading(false);
   const sk=bulkVal.filter(r=>!r._ok).length;
   bulkVal=[];
   document.getElementById('bPrev').innerHTML='';
   document.getElementById('bAct').style.display='none';
   document.getElementById('bFile').value='';
-  toast(ok.length+' proctors uploaded!'+(sk?' '+sk+' rows skipped.':''),'success');
   badges();nav('incomplete');
+  silentRefresh();
 }
 
 // ══════════════════════════════════════════════════
@@ -1327,6 +1341,31 @@ async function addLog(action,target,det){
 const om=id=>document.getElementById(id).classList.add('open');
 const cm=id=>document.getElementById(id).classList.remove('open');
 const er=(c,m)=>`<tr><td colspan="${c}"><div class="empty"><div class="ei">🔍</div><h3>${m}</h3></div></td></tr>`;
+
+// Silent background refresh — reloads Sheets data without showing full loader
+async function silentRefresh() {
+  try {
+    const d = await gasCall('loadAll');
+    proctors = (d.proctors||[]).map(r => rowToObj(P_COLS, r));
+    logs     = (d.logs||[]).map(r => rowToObj(L_COLS, r));
+    localStorage.setItem('pp_proctors_cache', JSON.stringify(proctors));
+    localStorage.setItem('pp_logs_cache', JSON.stringify(logs));
+    // Re-render whichever page is currently active
+    const active = document.querySelector('.page.active');
+    if(active) {
+      const pg = active.id.replace('page-','');
+      const renders = {
+        dashboard: renderDash, proctors: renderPro, onboarding: renderOnboard,
+        active: renderActive, offboarded: renderOff, audit: renderAudit,
+        myProctors: renderMyPro, incomplete: renderInc
+      };
+      if(renders[pg]) renders[pg]();
+    }
+    badges();
+  } catch(e) {
+    console.warn('Silent refresh failed:', e.message);
+  }
+}
 
 function badges(){
   if(!CU)return;
