@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Proctor Management Portal</title>
+<title>Talview Proctor Management Portal</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
 :root {
@@ -478,7 +478,7 @@ const USERS={
   Awign_Uploader:   {pw:'A93mMNpD', role:'uploader', name:'Awign Uploader',    disp:'Vendor Uploader — Awign',   vendor:'Awign', locked:true},
 };
 
-let CU=null,proctors=[],logs=[],CA={},bulkVal=[];
+let CU=null,proctors=[],logs=[],CA={},bulkVal=[],lastLoadTime=0;
 
 // ══════════════════════════════════════════════════
 // GOOGLE SHEETS CONFIG — fill in your values here
@@ -556,26 +556,22 @@ async function gasCall(action, payload={}) {
 async function loadData() {
   showLoading(true);
   try {
-    const d = await gasCall('loadAll');
+    // Load proctors + credentials only (logs loaded on demand)
+    const d = await gasCall('loadProctors');
     proctors = (d.proctors||[]).map(r => rowToObj(P_COLS, r));
-    logs     = (d.logs||[]).map(r => rowToObj(L_COLS, r));
-    // Override USERS from Credentials sheet if present
     (d.credentials||[]).forEach(r => {
       const [un,pw,role,name,disp,vendor,locked] = r;
       if(un) USERS[un] = {pw,role,name,disp,vendor:vendor||null,locked:locked==='true'};
     });
-    // Cache locally as offline fallback
     localStorage.setItem('pp_proctors_cache', JSON.stringify(proctors));
-    localStorage.setItem('pp_logs_cache', JSON.stringify(logs));
-    console.log('Loaded', proctors.length, 'proctors,', logs.length, 'log entries from Sheets');
+    lastLoadTime = Date.now();
+    console.log('Loaded', proctors.length, 'proctors from Sheets');
   } catch(e) {
     console.error('loadData error:', e);
     // Fallback to local cache
     try {
       const p=localStorage.getItem('pp_proctors_cache');
-      const l=localStorage.getItem('pp_logs_cache');
       if(p) proctors=JSON.parse(p);
-      if(l) logs=JSON.parse(l);
       if(proctors.length) toast('Loaded from local cache — changes will sync when back online','warning');
       else toast('Cannot connect to Google Sheets. Check your Apps Script URL.','error');
     } catch(le){ toast('Connection failed and no local cache found.','error'); }
@@ -584,14 +580,27 @@ async function loadData() {
 }
 
 async function saveProctor(p, isNew=true) {
-  // Save to local cache immediately (optimistic)
+  // Save to local cache immediately (optimistic UI)
   localStorage.setItem('pp_proctors_cache', JSON.stringify(proctors));
-  // Then sync to Sheets
   try {
-    await gasCall(isNew ? 'appendProctor' : 'updateProctor', {row: objToRow(P_COLS, p), id: p.id});
+    if(isNew) {
+      // Server-side duplicate check before writing — bulletproof even with concurrent users
+      const dupCheck = await gasCall('checkAndAppendProctor', {row: objToRow(P_COLS, p), id: p.id});
+      if(dupCheck.duplicate) {
+        // Remove from local array — server rejected it
+        proctors = proctors.filter(x => x.id !== p.id);
+        localStorage.setItem('pp_proctors_cache', JSON.stringify(proctors));
+        toast('⚠️ Duplicate blocked by server — '+dupCheck.field+' already exists: '+dupCheck.existing,'error');
+        badges();
+        return;
+      }
+    } else {
+      await gasCall('updateProctor', {row: objToRow(P_COLS, p), id: p.id});
+    }
+    lastLoadTime = 0; // Invalidate cache
   } catch(e) {
     console.error('saveProctor error:', e);
-    toast('Saved locally — could not sync to Sheets right now. Will retry on next action.','warning');
+    toast('Saved locally — could not sync to Sheets right now.','warning');
   }
 }
 
@@ -708,7 +717,7 @@ function nav(pg){
   if(pg==='onboarding')renderOnboard();
   if(pg==='active')renderActive();
   if(pg==='offboarded')renderOff();
-  if(pg==='audit')renderAudit();
+  if(pg==='audit'){loadLogsIfNeeded().then(renderAudit);}
   if(pg==='incomplete')renderInc();
   if(pg==='myProctors')renderMyPro();
   if(pg==='credentials')renderCreds();
@@ -797,6 +806,18 @@ function renderOff(){
     <td><span class="vb ${VCL[p.vendor]}">${p.vendor}</span></td>
     <td style="color:var(--text3);font-size:12px">${fd2(p.oat)}</td><td>${p.or}</td>
     <td><button class="btn btn-ghost btn-sm" onclick="viewP('${p.id}')">👁 View</button></td></tr>`).join('')||er(6,'No offboarded proctors');
+}
+
+async function loadLogsIfNeeded() {
+  if(logs.length > 0) return; // already loaded
+  try {
+    const d = await gasCall('loadLogs');
+    logs = (d.logs||[]).map(r => rowToObj(L_COLS, r));
+    localStorage.setItem('pp_logs_cache', JSON.stringify(logs));
+  } catch(e) {
+    const l = localStorage.getItem('pp_logs_cache');
+    if(l) logs = JSON.parse(l);
+  }
 }
 
 function renderAudit(){
@@ -1090,6 +1111,13 @@ async function submitProctor(){
   if(!nda)          {setE('f_nda','e_nda','NDA document link is required');ok=false;}
   if(!ok)return;
 
+  // Refresh from Sheets if data is stale (>30s) before checking duplicates
+  if((Date.now() - lastLoadTime) > 30000) {
+    showLoading(true);
+    await silentRefresh(true);
+    showLoading(false);
+  }
+
   const da=proctors.find(p=>p.aadhaar===aadhaar);
   if(da){setE('f_aadhaar','e_aadhaar','⚠️ Duplicate — already exists: '+da.name+' ('+da.vendor+')');return;}
   const dp=proctors.find(p=>p.phone===phone);
@@ -1133,17 +1161,48 @@ function dlTpl(){
   toast('Template downloaded','success');
 }
 
+// Proper CSV parser — handles commas inside quoted fields correctly
+function parseCSV(text) {
+  const lines = [];
+  let cur = '', inQ = false;
+  const chars = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  let row = [];
+  for(let i=0;i<chars.length;i++){
+    const c=chars[i];
+    if(c==='"'){
+      if(inQ && chars[i+1]==='"'){cur+='"';i++;}
+      else inQ=!inQ;
+    } else if(c===',' && !inQ){
+      row.push(cur.trim());cur='';
+    } else if(c==='\n' && !inQ){
+      row.push(cur.trim());cur='';
+      if(row.some(v=>v!=''))lines.push(row);
+      row=[];
+    } else {
+      cur+=c;
+    }
+  }
+  if(cur||row.length)row.push(cur.trim());
+  if(row.some(v=>v!=''))lines.push(row);
+  return lines;
+}
+
 function handleBulk(e){
   const file=e.target.files[0];if(!file)return;
   const r=new FileReader();
-  r.onload=ev=>{
-    const lines=ev.target.result.split('\n').map(l=>l.trim()).filter(Boolean);
-    if(lines.length<2){toast('File appears empty','error');return;}
-    const hdrs=lines[0].split(',').map(h=>h.trim().toLowerCase());
-    const raw=lines.slice(1).map(line=>{
-      const vals=line.split(',');const obj={};
-      hdrs.forEach((h,i)=>obj[h]=(vals[i]||'').trim());return obj;
-    }).filter(r=>r.name);
+  r.onload=async ev=>{
+    const parsed = parseCSV(ev.target.result);
+    if(parsed.length<2){toast('File appears empty or has no data rows','error');return;}
+    const hdrs = parsed[0].map(h=>h.toLowerCase().trim());
+    const raw  = parsed.slice(1).map(row=>{
+      const obj={};
+      hdrs.forEach((h,i)=>obj[h]=(row[i]||'').trim());
+      return obj;
+    });
+    // Don't silently drop rows with missing name — keep them so validation shows the error
+    if(!raw.length){toast('No data rows found in file','error');return;}
+    toast('Checking '+raw.length+' rows against live database...','info');
+    await silentRefresh(true); // force fresh data for duplicate check
     validateBulk(raw);
   };
   r.readAsText(file);
@@ -1151,10 +1210,16 @@ function handleBulk(e){
 
 function validateBulk(raw){
   const lv=CU.locked?CU.vendor:null;
+  // Track within-file duplicates
   const sA={},sP={},sE={};
+  // Build fast lookup sets from live proctors array
+  const dbAadhaar = new Set(proctors.map(p=>p.aadhaar));
+  const dbPhone   = new Set(proctors.map(p=>p.phone));
+  const dbEmail   = new Set(proctors.map(p=>(p.email||'').toLowerCase()));
+
   bulkVal=raw.map((r,idx)=>{
     const errs=[];
-    if(!r.name)errs.push('Missing name');
+    if(!r.name||r.name.trim()==='')errs.push('Missing name — check CSV column alignment');
     if(!r.aadhaar||!/^\d{12}$/.test(r.aadhaar))errs.push('Invalid Aadhaar (12 digits required)');
     if(!r.dob)errs.push('Missing DOB');
     if(!r.gender)errs.push('Missing gender');
@@ -1166,16 +1231,33 @@ function validateBulk(raw){
     if(!r.city)errs.push('Missing city');
     if(!r.state)errs.push('Missing state');
     if(!r.nda_link)errs.push('Missing NDA link');
-    // bgv_link and notes are optional
-    if(r.aadhaar&&/^\d{12}$/.test(r.aadhaar)){const d=proctors.find(p=>p.aadhaar===r.aadhaar);if(d)errs.push('Duplicate Aadhaar — exists: '+d.name+' ('+d.vendor+')');}
-    if(r.phone&&/^\d{10}$/.test(r.phone)){const d=proctors.find(p=>p.phone===r.phone);if(d)errs.push('Duplicate phone — exists: '+d.name+' ('+d.vendor+')');}
-    if(r.email&&r.email.includes('@')){const d=proctors.find(p=>p.email.toLowerCase()===r.email.toLowerCase());if(d)errs.push('Duplicate email — exists: '+d.name+' ('+d.vendor+')');}
-    const ak=r.aadhaar,pk=r.phone,ek=(r.email||'').toLowerCase();
-    if(ak){if(sA[ak])errs.push('Aadhaar repeated in file (row '+(sA[ak]+1)+')');else sA[ak]=idx+1;}
-    if(pk){if(sP[pk])errs.push('Phone repeated in file (row '+(sP[pk]+1)+')');else sP[pk]=idx+1;}
-    if(ek){if(sE[ek])errs.push('Email repeated in file (row '+(sE[ek]+1)+')');else sE[ek]=idx+1;}
+
+    // ── Check against live database ──
+    const ak=r.aadhaar, pk=r.phone, ek=(r.email||'').toLowerCase();
+    if(ak&&/^\d{12}$/.test(ak)){
+      const d=proctors.find(p=>p.aadhaar===ak);
+      if(d) errs.push('Aadhaar already in database — '+d.name+' ('+d.vendor+')');
+    }
+    if(pk&&/^\d{10}$/.test(pk)){
+      const d=proctors.find(p=>p.phone===pk);
+      if(d) errs.push('Phone already in database — '+d.name+' ('+d.vendor+')');
+    }
+    if(ek&&r.email.includes('@')){
+      const d=proctors.find(p=>(p.email||'').toLowerCase()===ek);
+      if(d) errs.push('Email already in database — '+d.name+' ('+d.vendor+')');
+    }
+
+    // ── Check within the file itself ──
+    if(ak){if(sA[ak])errs.push('Aadhaar repeated in this file — row '+(sA[ak]+1));else sA[ak]=idx+1;}
+    if(pk){if(sP[pk])errs.push('Phone repeated in this file — row '+(sP[pk]+1));else sP[pk]=idx+1;}
+    if(ek){if(sE[ek])errs.push('Email repeated in this file — row '+(sE[ek]+1));else sE[ek]=idx+1;}
+
     return{...r,_v:vend,_ok:errs.length===0,_errs:errs};
   });
+
+  const dupCount  = bulkVal.filter(r=>r._errs.some(e=>e.includes('already in database')||e.includes('repeated in this file'))).length;
+  const skipCount = bulkVal.filter(r=>!r._ok).length;
+  if(dupCount>0) toast(dupCount+' duplicate(s) found and will be skipped','warning');
   renderBulkPrev();
 }
 
@@ -1205,39 +1287,62 @@ function renderBulkPrev(){
 }
 
 async function confirmBulk(){
-  const ok=bulkVal.filter(r=>r._ok);if(!ok.length){toast('No valid rows to upload','error');return;}
-  ok.forEach(r=>{
-    const p={id:'p'+Date.now()+Math.random(),pid:'',name:r.name,aadhaar:r.aadhaar,
-      vendor:r._v,phone:r.phone,email:r.email,address:r.address,city:r.city,state:r.state,
-      dob:r.dob,gender:r.gender,bgv:r.bgv_link||'',nda:r.nda_link||'',notes:r.notes||'',
-      status:'In Progress',stage:1,by:CU.un,
-      at:new Date().toISOString(),upd:new Date().toISOString(),
-      vby:'',vat:null,aat:null,oat:null,or:'',on:''};
-    proctors.push(p);
-    addLog('Created',p.name,'Bulk upload. Vendor: '+p.vendor+(CU.role==='talview'?' (via Talview Uploader)':'')+(p.bgv?'':' BGV pending'));
-  });
+  const ok=bulkVal.filter(r=>r._ok);
+  const sk=bulkVal.filter(r=>!r._ok).length;
+  if(!ok.length){toast('No valid rows to upload','error');return;}
+
+  // Build proctor objects
+  const newProctors=ok.map(r=>({
+    id:'p'+Date.now()+Math.random(),pid:'',
+    name:r.name,aadhaar:r.aadhaar,vendor:r._v,
+    phone:r.phone,email:r.email,address:r.address,
+    city:r.city,state:r.state,dob:r.dob,gender:r.gender,
+    bgv:r.bgv_link||'',nda:r.nda_link||'',notes:r.notes||'',
+    status:'In Progress',stage:1,by:CU.un,
+    at:new Date().toISOString(),upd:new Date().toISOString(),
+    vby:'',vat:null,aat:null,oat:null,or:'',on:''
+  }));
+
   showLoading(true);
-  // Send all rows in ONE batch call instead of individual requests
   try {
-    const rows = ok.map(p2 => objToRow(P_COLS, p2));
-    await gasCall('batchAppendProctors', {rows});
-    // Also log each creation (fire and forget)
-    ok.forEach(p2 => addLog('Created', p2.name, 'Bulk upload. Vendor: '+p2.vendor+(CU.role==='talview'?' (via Talview Uploader)':'')+(p2.bgv?'':' BGV pending')));
+    const rows = newProctors.map(p => objToRow(P_COLS, p));
+    const result = await gasCall('batchAppendProctors', {rows});
+
+    // Server may have skipped additional duplicates it found
+    const serverSkipped = result.skipped||0;
+    const serverSkippedRows = result.skippedRows||[];
+    const serverSkippedIds = new Set(serverSkippedRows.map(s=>s.name));
+
+    // Only add to local proctors array what server actually saved
+    const saved = newProctors.filter(p => !serverSkippedIds.has(p.name));
+    saved.forEach(p => proctors.push(p));
     localStorage.setItem('pp_proctors_cache', JSON.stringify(proctors));
-    toast(ok.length+' proctors uploaded to Google Sheets!'+(sk?' '+sk+' rows skipped.':''),'success');
+
+    // Log only saved proctors — single log per proctor, after confirmed save
+    saved.forEach(p => addLog('Created', p.name,
+      'Bulk upload. Vendor: '+p.vendor+
+      (CU.role==='talview'?' (via Talview Uploader)':'')+
+      (p.bgv?'':' BGV pending')));
+
+    const totalSkipped = sk + serverSkipped;
+    toast(saved.length+' proctors uploaded!'+(totalSkipped?' '+totalSkipped+' skipped (invalid or duplicate).':''),'success');
+    if(serverSkipped>0) toast(serverSkipped+' additional duplicate(s) caught by server and skipped.','warning');
+
   } catch(e) {
     console.error('Bulk upload error:', e);
-    localStorage.setItem('pp_proctors_cache', JSON.stringify(proctors));
-    toast(ok.length+' proctors saved locally. Sheets sync failed — will retry.','warning');
+    toast('Upload failed — please try again.','error');
+    showLoading(false);
+    return;
   }
+
   showLoading(false);
-  const sk=bulkVal.filter(r=>!r._ok).length;
   bulkVal=[];
   document.getElementById('bPrev').innerHTML='';
   document.getElementById('bAct').style.display='none';
   document.getElementById('bFile').value='';
-  badges();nav('incomplete');
-  silentRefresh();
+  badges();
+  await silentRefresh(true);
+  nav('incomplete');
 }
 
 // ══════════════════════════════════════════════════
@@ -1343,13 +1448,17 @@ const cm=id=>document.getElementById(id).classList.remove('open');
 const er=(c,m)=>`<tr><td colspan="${c}"><div class="empty"><div class="ei">🔍</div><h3>${m}</h3></div></td></tr>`;
 
 // Silent background refresh — reloads Sheets data without showing full loader
-async function silentRefresh() {
+async function silentRefresh(force=false) {
+  // Skip if data was loaded less than 30 seconds ago (unless forced)
+  if(!force && (Date.now() - lastLoadTime) < 30000) {
+    console.log('Skipping refresh — data is fresh ('+Math.round((Date.now()-lastLoadTime)/1000)+'s old)');
+    return;
+  }
   try {
-    const d = await gasCall('loadAll');
+    const d = await gasCall('loadProctors');
     proctors = (d.proctors||[]).map(r => rowToObj(P_COLS, r));
-    logs     = (d.logs||[]).map(r => rowToObj(L_COLS, r));
     localStorage.setItem('pp_proctors_cache', JSON.stringify(proctors));
-    localStorage.setItem('pp_logs_cache', JSON.stringify(logs));
+    lastLoadTime = Date.now();
     // Re-render whichever page is currently active
     const active = document.querySelector('.page.active');
     if(active) {
