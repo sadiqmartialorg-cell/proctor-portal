@@ -697,7 +697,7 @@ function buildNav(){
       <div class="nav-item" onclick="nav('addProctor')"><span class="icon">➕</span>Add Proctor</div>
       <div class="nav-item" onclick="nav('bulkUpload')"><span class="icon">📤</span>Bulk Upload</div>
       <div class="nav-item" onclick="nav('incomplete')"><span class="icon">⚠️</span>Incomplete<span class="nav-badge" id="nb-inc" style="background:var(--warning)">0</span></div>`;
-    document.getElementById('tAc').innerHTML='<button class="btn btn-ghost btn-sm" id="refreshBtn" onclick="manualRefresh()">🔄 Refresh</button>';
+    document.getElementById('tAc').innerHTML='<button class="btn btn-ghost btn-sm" id="refreshBtn" onclick="manualRefreshWithFeedback()">🔄 Refresh</button>';
     setTimeout(applyVendorLock,50);
   }
   badges();
@@ -1507,7 +1507,15 @@ async function manualRefresh() {
   }
   badges();
   if(btn) { btn.disabled=false; btn.textContent='🔄 Refresh'; }
-  toast('Synced with Google Sheets — '+proctors.length+' proctors loaded','success');
+}
+
+async function manualRefreshWithFeedback() {
+  try {
+    await manualRefresh();
+    toast('Synced — '+proctors.length+' proctors loaded','success');
+  } catch(e) {
+    toast('Sync failed. Check your internet connection and try again.','error');
+  }
 }
 
 // Silent background refresh — reloads Sheets data without showing full loader
