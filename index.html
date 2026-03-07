@@ -729,7 +729,8 @@ async function doLogin(){
   const startPage = CU.role==='admin'?'dashboard':'myProctors';
   nav(startPage);
   badges();
-  toast(CU.role==='admin'?'Welcome, '+CU.name+'! '+proctors.length+' proctors loaded.':'Welcome, '+CU.name+'!','success');
+  const _wc=CU.role==='admin'?'Welcome, '+CU.name+'! '+proctors.length+' proctors loaded.':CU.role==='talview'?'Welcome, '+CU.name+'!':'Welcome, '+CU.name+'! '+proctors.filter(p=>p.vendor===CU.vendor).length+' '+CU.vendor+' proctors loaded.';
+  toast(_wc,'success');
   // Persist session so page refresh doesn't log out
   localStorage.setItem('pp_session', JSON.stringify({un:CU.un, pw:USERS[CU.un].pw}));
   // Start auto-refresh + inactivity timer
@@ -1931,7 +1932,12 @@ async function manualRefresh() {
 async function manualRefreshWithFeedback() {
   try {
     await manualRefresh();
-    toast('Synced — '+proctors.length+' proctors loaded','success');
+    if(CU.role==='admin'||CU.role==='talview'){
+      toast('Synced — '+proctors.length+' proctors loaded','success');
+    } else {
+      const myCount=proctors.filter(p=>p.vendor===CU.vendor).length;
+      toast('Synced — '+myCount+' '+CU.vendor+' proctors loaded','success');
+    }
   } catch(e) {
     toast('Sync failed. Check your internet connection and try again.','error');
   }
