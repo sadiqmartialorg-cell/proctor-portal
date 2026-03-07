@@ -6,7 +6,7 @@
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Proctor Management Portal</title>
+<title>Talview · Proctor Portal</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
 :root {
@@ -203,14 +203,27 @@ tr:hover td{background:rgba(255,255,255,.02);}
   <div style="width:48px;height:48px;border:4px solid rgba(79,142,247,.3);border-top-color:#4f8ef7;border-radius:50%;animation:spin .8s linear infinite;"></div>
   <div style="color:#e8eaf0;font-size:14px;font-weight:600;" id="loadingMsg">Syncing with Google Sheets...</div>
 </div>
+
+<!-- Floating bulk progress panel — non-blocking -->
+<div id="bulkProgressPanel" style="display:none;position:fixed;bottom:24px;right:24px;z-index:8000;
+  background:#1a1f2e;border:1px solid #2a3047;border-radius:12px;padding:16px 20px;
+  box-shadow:0 8px 32px rgba(0,0,0,.6);min-width:280px;font-family:'DM Sans',sans-serif;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+    <span id="bpTitle" style="font-size:13px;font-weight:700;color:#e2e8f7;">Processing...</span>
+    <span id="bpCount" style="font-family:'DM Mono',monospace;font-size:12px;color:#6b7a99;"></span>
+  </div>
+  <div style="background:#0c0e14;border-radius:6px;height:6px;overflow:hidden;margin-bottom:10px;">
+    <div id="bpBar" style="height:100%;background:linear-gradient(90deg,#3d7fff,#7c3aed);border-radius:6px;transition:width .3s ease;width:0%;"></div>
+  </div>
+  <div id="bpStatus" style="font-size:11px;color:#6b7a99;"></div>
+</div>
 <style>@keyframes spin{to{transform:rotate(360deg);}}</style>
 
 <div id="loginScreen">
   <div class="login-card">
     <div class="login-logo">
-      <div class="logo-icon">🛡️</div>
-      <h1>Proctor Portal</h1>
-      <p>Secure Proctor Management System</p>
+      <div style="font-size:26px;font-weight:800;letter-spacing:-.03em;color:var(--text1);margin-bottom:6px;">Talview</div>
+      <div style="font-size:13px;color:var(--text2);font-weight:500;">Proctor Portal</div>
     </div>
     <div class="form-group">
       <label>Username</label>
@@ -234,8 +247,10 @@ tr:hover td{background:rgba(255,255,255,.02);}
     <aside class="sidebar">
       <div class="sidebar-header">
         <div class="sidebar-logo">
-          <div class="logo-icon">🛡️</div>
-          <span>Proctor<br>Portal</span>
+          <div style="line-height:1.2;">
+            <div style="font-size:16px;font-weight:800;letter-spacing:-.02em;color:var(--text1);">Talview</div>
+            <div style="font-size:10px;color:var(--text3);font-weight:500;letter-spacing:.06em;text-transform:uppercase;">Proctor Portal</div>
+          </div>
         </div>
       </div>
       <nav class="sidebar-nav" id="sNav"></nav>
@@ -280,25 +295,41 @@ tr:hover td{background:rgba(255,255,255,.02);}
               <span class="tc2" id="pCnt"></span>
               <button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬇ Export</button>
             </div>
-            <div class="ox"><table><thead><tr><th>ID</th><th>Name</th><th>Aadhaar</th><th>Vendor</th><th>Phone</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead><tbody id="pBody"></tbody></table></div>
+            <div class="ox"><table><thead><tr><th>ID</th><th>Name</th><th>Aadhaar</th><th>Vendor</th><th>Type</th><th>Phone</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead><tbody id="pBody"></tbody></table></div>
           </div>
         </div>
 
         <!-- IN PROGRESS -->
         <div class="page" id="page-onboarding">
           <div class="page-header"><div><h2>In Progress</h2><p>Pending verification or ID assignment</p></div></div>
-          <div class="tw"><div class="ox"><table><thead><tr><th>Name</th><th>Vendor</th><th>Aadhaar</th><th>Stage</th><th>Submitted</th><th>BGV</th><th>Actions</th></tr></thead><tbody id="oBody"></tbody></table></div></div>
+          <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+            <input class="si" style="flex:1;min-width:180px" placeholder="🔍 Name, ID, phone..." id="sOnb" oninput="renderOnboard()"/>
+            <select class="fsel" id="fOnbV" onchange="renderOnboard()"><option value="">All Vendors</option><option>Sai</option><option>TSN</option><option>Avner</option><option>A&M</option><option>Atura</option><option>Awign</option></select>
+            <button class="btn btn-ghost btn-sm" onclick="exportTabCSV('onboarding')">⬇ Export</button>
+            <label style="font-size:13px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this.checked)" style="accent-color:var(--accent)"/>Select All</label>
+          </div>
+          <div class="tw"><div class="ox"><table><thead><tr><th style="width:32px"></th><th>Name</th><th>Vendor</th><th>Type</th><th>Aadhaar</th><th>Stage</th><th>Submitted</th><th>BGV</th><th>Actions</th></tr></thead><tbody id="oBody"></tbody></table></div></div>
         </div>
 
         <!-- ACTIVE -->
         <div class="page" id="page-active">
           <div class="page-header"><div><h2>Active Proctors</h2><p>Fully onboarded</p></div></div>
-          <div class="tw"><div class="ox"><table><thead><tr><th>ID</th><th>Name</th><th>Vendor</th><th>Phone</th><th>Activated</th><th>Actions</th></tr></thead><tbody id="aBody"></tbody></table></div></div>
+          <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+            <input class="si" style="flex:1;min-width:180px" placeholder="🔍 Name, ID, phone..." id="sAct" oninput="renderActive()"/>
+            <select class="fsel" id="fActV" onchange="renderActive()"><option value="">All Vendors</option><option>Sai</option><option>TSN</option><option>Avner</option><option>A&M</option><option>Atura</option><option>Awign</option></select>
+            <button class="btn btn-ghost btn-sm" onclick="exportTabCSV('active')">⬇ Export</button>
+          </div>
+          <div class="tw"><div class="ox"><table><thead><tr><th>ID</th><th>Name</th><th>Vendor</th><th>Type</th><th>Phone</th><th>BGV</th><th>Activated</th><th>Actions</th></tr></thead><tbody id="aBody"></tbody></table></div></div>
         </div>
 
         <!-- OFFBOARDED -->
         <div class="page" id="page-offboarded">
           <div class="page-header"><div><h2>Offboarded</h2><p>Inactive — records retained permanently</p></div></div>
+          <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+            <input class="si" style="flex:1;min-width:180px" placeholder="🔍 Name, ID, phone..." id="sOff" oninput="renderOff()"/>
+            <select class="fsel" id="fOffV" onchange="renderOff()"><option value="">All Vendors</option><option>Sai</option><option>TSN</option><option>Avner</option><option>A&M</option><option>Atura</option><option>Awign</option></select>
+            <button class="btn btn-ghost btn-sm" onclick="exportTabCSV('offboarded')">⬇ Export</button>
+          </div>
           <div class="tw"><div class="ox"><table><thead><tr><th>ID</th><th>Name</th><th>Vendor</th><th>Offboarded</th><th>Reason</th><th>Actions</th></tr></thead><tbody id="offBody"></tbody></table></div></div>
         </div>
 
@@ -313,8 +344,10 @@ tr:hover td{background:rgba(255,255,255,.02);}
                 <div class="form-group"><label>Aadhaar Number <span class="req">*</span></label><input id="f_aadhaar" placeholder="12-digit Aadhaar" maxlength="12"/><div class="field-error" id="e_aadhaar"></div></div>
                 <div class="form-group"><label>Date of Birth <span class="req">*</span></label><input id="f_dob" type="date"/><div class="field-error" id="e_dob"></div></div>
                 <div class="form-group"><label>Gender <span class="req">*</span></label><select id="f_gender"><option value="">Select</option><option>Male</option><option>Female</option><option>Other</option></select><div class="field-error" id="e_gender"></div></div>
+                <div class="form-group"><label>Proctor Type <span class="req">*</span></label><select id="f_ptype"><option value="">Select</option><option value="WFO">WFO — Work from Office</option><option value="ODP">ODP — On Demand Proctor</option><option value="Hybrid">Hybrid — In Office On Demand</option></select><div class="field-error" id="e_ptype"></div></div>
                 <div class="form-group"><label>Vendor <span class="req">*</span></label>
                   <select id="f_vendor"><option value="">Select Vendor</option><option>Sai</option><option>TSN</option><option>Avner</option><option>A&M</option><option>Atura</option><option>Awign</option></select>
+                  <div id="f_vendor_locked" style="display:none;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-size:13px;font-weight:600;color:var(--text1);"></div>
                   <div class="field-error" id="e_vendor"></div>
                 </div>
               </div>
@@ -352,19 +385,34 @@ tr:hover td{background:rgba(255,255,255,.02);}
               <span class="tc2" id="myPCnt"></span>
               <div id="myPExportBtn"></div>
             </div>
-            <div class="ox"><table><thead><tr><th>Name</th><th>Aadhaar</th><th>Vendor</th><th>Phone</th><th>Status</th><th>BGV</th><th>Submitted</th><th>Actions</th></tr></thead><tbody id="myPBody"></tbody></table></div>
+            <div class="ox"><table><thead><tr><th>Name</th><th>Aadhaar</th><th>Vendor</th><th>Type</th><th>Phone</th><th>Status</th><th>BGV</th><th>Submitted</th><th>Actions</th></tr></thead><tbody id="myPBody"></tbody></table></div>
           </div>
         </div>
 
         <!-- INCOMPLETE -->
         <div class="page" id="page-incomplete">
-          <div class="page-header"><div><h2>Incomplete Proctor Details</h2><p>Your submissions missing the BGV document</p></div></div>
+          <div class="page-header"><div><h2>Incomplete BGV</h2><p>All proctors with missing BGV document — across all statuses</p></div></div>
+          <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+            <input class="si" id="sInc" placeholder="🔍 Search name, vendor..." oninput="renderInc()" style="flex:1;min-width:180px;"/>
+            <select class="fsel" id="fIncStatus" onchange="renderInc()">
+              <option value="">All Statuses</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Verified">Verified</option>
+              <option value="Active">Active</option>
+              <option value="Offboarded">Offboarded</option>
+            </select>
+            <select class="fsel" id="fIncVendor" onchange="renderInc()">
+              <option value="">All Vendors</option>
+              <option>Sai</option><option>TSN</option><option>Avner</option>
+              <option>A&amp;M</option><option>Atura</option><option>Awign</option>
+            </select>
+          </div>
           <div id="incList"></div>
         </div>
 
         <!-- BULK UPLOAD -->
         <div class="page" id="page-bulkUpload">
-          <div class="page-header"><div><h2>Bulk Upload</h2><p>Upload multiple proctors via CSV</p></div></div>
+          <div class="page-header"><div><h2>Bulk Upload</h2><p>Upload multiple proctors via CSV — all rows must be valid, any error blocks the entire file</p></div></div>
           <div style="max-width:680px;">
             <div class="tw" style="padding:24px;">
               <div class="sec-t">Step 1 — Download Template</div>
@@ -375,6 +423,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
                 <div class="upi">📤</div>
                 <p><span>Click to upload</span> or drag and drop</p>
                 <p style="margin-top:6px;font-size:12px;color:var(--text3)">CSV files only</p>
+                <p style="margin-top:4px;font-size:11px;color:var(--warning)">⚠️ Aadhaar: format the column as <strong>Plain Text</strong> in Excel/Sheets before saving as CSV to avoid scientific notation</p>
               </div>
               <input type="file" id="bFile" accept=".csv" style="display:none" onchange="handleBulk(event)"/>
               <div id="bPrev" style="margin-top:20px;"></div>
@@ -386,6 +435,18 @@ tr:hover td{background:rgba(255,255,255,.02);}
         </div>
 
         <!-- AUDIT LOG -->
+        <div class="page" id="page-bulkBGV">
+          <div class="page-header"><div><h2>Bulk BGV Update</h2><p>Upload CSV to update BGV links for multiple proctors</p></div></div>
+          <div style="max-width:600px;">
+            <button class="btn btn-ghost" onclick="dlBGVTpl()" style="margin-bottom:16px;">⬇ Download Template</button>
+            <div class="form-group"><label>Upload BGV CSV</label>
+              <input type="file" id="bgvFile" accept=".csv" onchange="handleBulkBGV(event)" style="padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;width:100%;color:var(--text1);cursor:pointer;"/>
+            </div>
+            <div id="bgvPrev" style="margin-top:16px;"></div>
+            <div id="bgvAct" style="display:none;margin-top:16px;"><button class="btn btn-primary" onclick="confirmBulkBGV()">💾 Update BGV Links</button></div>
+          </div>
+        </div>
+
         <div class="page" id="page-audit">
           <div class="page-header"><div><h2>Audit Log</h2><p>Complete action trail</p></div></div>
           <div class="tw">
@@ -405,6 +466,12 @@ tr:hover td{background:rgba(255,255,255,.02);}
         </div>
 
       </div>
+    <div id="bulkBar" style="display:none;position:sticky;bottom:0;background:var(--surface);border-top:2px solid var(--accent);padding:12px 24px;align-items:center;gap:12px;z-index:40;box-shadow:0 -4px 16px rgba(0,0,0,.4);">
+      <span id="selCount" style="font-size:13px;color:var(--text2);flex:1;">0 selected</span>
+      <button class="btn btn-success btn-sm" onclick="bulkVerify()">✅ Verify Selected</button>
+      <button class="btn btn-primary btn-sm" onclick="bulkAssignIDs()">🎯 Assign IDs</button>
+      <button class="btn btn-ghost btn-sm" onclick="clearSelection()">✕ Clear</button>
+    </div>
     </main>
   </div>
 </div>
@@ -484,7 +551,7 @@ const USERS={
   Awign_Uploader:   {pw:'A93mMNpD', role:'uploader', name:'Awign Uploader',    disp:'Vendor Uploader — Awign',   vendor:'Awign', locked:true},
 };
 
-let CU=null,proctors=[],logs=[],CA={},bulkVal=[],lastLoadTime=0;
+let CU=null,proctors=[],logs=[],CA={},bulkVal=[],lastLoadTime=0,selectedIds=new Set();
 
 // ══════════════════════════════════════════════════
 // GOOGLE SHEETS CONFIG — fill in your values here
@@ -498,7 +565,7 @@ const GS_CONFIG = {
 
 // Column order in Proctors sheet (A→)
 const P_COLS = ['id','pid','name','aadhaar','vendor','phone','email','address','city','state',
-  'dob','gender','bgv','nda','notes','status','stage','by','at','upd','vby','vat','aat','oat','or','on'];
+  'dob','gender','ptype','bgv','nda','notes','status','stage','by','at','upd','vby','vat','aat','oat','or','on'];
 
 // Column order in AuditLog sheet (A→)
 const L_COLS = ['id','ts','user','action','target','det'];
@@ -595,12 +662,16 @@ async function saveProctor(p, isNew=true) {
       // Server-side duplicate check before writing — bulletproof even with concurrent users
       const dupCheck = await gasCall('checkAndAppendProctor', {row: objToRow(P_COLS, p), id: p.id});
       if(dupCheck.duplicate) {
-        // Remove from local array — server rejected it
         proctors = proctors.filter(x => x.id !== p.id);
         localStorage.setItem('pp_proctors_cache', JSON.stringify(proctors));
-        toast('⚠️ Duplicate blocked by server — '+dupCheck.field+' already exists: '+dupCheck.existing,'error');
-        badges();
-        return;
+        if(dupCheck.offboarded){
+          if(confirm('This proctor is Offboarded.\nRe-onboard '+dupCheck.existing+'?\nTheir record will be reset to In Progress.')){
+            await reOnboardProctor(dupCheck.existingId, p);
+          }
+        } else {
+          toast('Duplicate — '+dupCheck.field+' already exists: '+dupCheck.existing,'error');
+        }
+        badges(); return;
       }
     } else {
       await gasCall('updateProctor', {row: objToRow(P_COLS, p), id: p.id});
@@ -658,21 +729,60 @@ async function doLogin(){
   const startPage = CU.role==='admin'?'dashboard':'myProctors';
   nav(startPage);
   badges();
-  toast('Welcome, '+CU.name+'! '+proctors.length+' proctors loaded.','success');
-  // Start auto-refresh every 2 minutes
+  toast(CU.role==='admin'?'Welcome, '+CU.name+'! '+proctors.length+' proctors loaded.':'Welcome, '+CU.name+'!','success');
+  // Persist session so page refresh doesn't log out
+  localStorage.setItem('pp_session', JSON.stringify({un:CU.un, pw:USERS[CU.un].pw}));
+  // Start auto-refresh + inactivity timer
   startAutoRefresh();
+  resetInactivityTimer();
 }
 
 function doLogout(){
-  stopAutoRefresh(); // Login/logout not logged
+  stopAutoRefresh();
+  clearInactivityTimer();
+  localStorage.removeItem('pp_session');
   CU=null;bulkVal=[];
-  // Data stays in localStorage — only clear session state
   proctors=[];logs=[];
   document.getElementById('app').style.display='none';
   document.getElementById('loginScreen').style.display='flex';
   document.getElementById('lu').value='';
   document.getElementById('lp').value='';
 }
+
+// ── Inactivity auto-logout (60 minutes) ──────────────────────
+let _inactTimer=null;
+const INACT_MS=60*60*1000; // 60 minutes
+function resetInactivityTimer(){
+  clearInactivityTimer();
+  _inactTimer=setTimeout(()=>{
+    if(CU){toast('Session expired due to inactivity. Please log in again.','warning');setTimeout(doLogout,2000);}
+  },INACT_MS);
+}
+function clearInactivityTimer(){if(_inactTimer){clearTimeout(_inactTimer);_inactTimer=null;}}
+['click','keydown','mousemove','touchstart'].forEach(ev=>
+  document.addEventListener(ev,()=>{if(CU)resetInactivityTimer();},{passive:true})
+);
+
+// ── Restore session on page load ──────────────────────────────
+window.addEventListener('DOMContentLoaded',async()=>{
+  if(GS_CONFIG.APPS_SCRIPT_URL==='YOUR_APPS_SCRIPT_URL'){
+    const w=document.getElementById('cfgWarning');if(w)w.style.display='block';
+  }
+  const saved=localStorage.getItem('pp_session');
+  if(saved){
+    try{
+      const {un,pw}=JSON.parse(saved);
+      if(USERS[un]&&USERS[un].pw===pw){
+        // Auto-restore session
+        document.getElementById('lu').value=un;
+        document.getElementById('lp').value=pw;
+        await doLogin();
+        return;
+      }
+    }catch(e){}
+    localStorage.removeItem('pp_session');
+  }
+});
 
 // ══════════════════════════════════════════════════
 // SIDEBAR
@@ -688,10 +798,15 @@ function buildNav(){
       <div class="nav-item" onclick="nav('onboarding')"><span class="icon">⏳</span>In Progress<span class="nav-badge" id="nb-ip" style="background:var(--warning)">0</span></div>
       <div class="nav-item" onclick="nav('active')"><span class="icon">✅</span>Active<span class="nav-badge" id="nb-act" style="background:var(--success);color:#000">0</span></div>
       <div class="nav-item" onclick="nav('offboarded')"><span class="icon">🚪</span>Offboarded</div>
+      <div class="nst" style="margin-top:8px">Upload</div>
+      <div class="nav-item" onclick="nav('addProctor')"><span class="icon">➕</span>Add Proctor</div>
+      <div class="nav-item" onclick="nav('bulkUpload')"><span class="icon">📤</span>Bulk Upload</div>
+      <div class="nav-item" onclick="nav('bulkBGV')"><span class="icon">📎</span>Bulk BGV Update</div>
+      <div class="nav-item" onclick="nav('incomplete')"><span class="icon">⚠️</span>Incomplete<span class="nav-badge" id="nb-inc" style="background:var(--warning)">0</span></div>
       <div class="nst" style="margin-top:8px">System</div>
       <div class="nav-item" onclick="nav('audit')"><span class="icon">📋</span>Audit Log</div>
       <div class="nav-item" onclick="nav('credentials')"><span class="icon">🔑</span>Credentials</div>`;
-    document.getElementById('tAc').innerHTML='<button class="btn btn-primary btn-sm" onclick="nav(\'onboarding\')">⏳ Review Pending</button>';
+    document.getElementById('tAc').innerHTML='<a href="attendance-portal.html" class="btn btn-ghost btn-sm" style="text-decoration:none;">📅 Attendance</a><button class="btn btn-ghost btn-sm" id="refreshBtn" onclick="manualRefreshWithFeedback()">🔄 Refresh</button><button class="btn btn-primary btn-sm" onclick="nav(\'onboarding\')">⏳ Review Pending</button>';
   } else {
     n.innerHTML=`
       <div class="nst">My Proctors</div>
@@ -699,17 +814,25 @@ function buildNav(){
       <div class="nst" style="margin-top:8px">Upload</div>
       <div class="nav-item" onclick="nav('addProctor')"><span class="icon">➕</span>Add Proctor</div>
       <div class="nav-item" onclick="nav('bulkUpload')"><span class="icon">📤</span>Bulk Upload</div>
-      <div class="nav-item" onclick="nav('incomplete')"><span class="icon">⚠️</span>Incomplete<span class="nav-badge" id="nb-inc" style="background:var(--warning)">0</span></div>`;
-    document.getElementById('tAc').innerHTML='<button class="btn btn-ghost btn-sm" id="refreshBtn" onclick="manualRefreshWithFeedback()">🔄 Refresh</button>';
+      <div class="nav-item" onclick="nav('incomplete')"><span class="icon">⚠️</span>Incomplete<span class="nav-badge" id="nb-inc" style="background:var(--warning)">0</span></div>
+      <div class="nav-item" onclick="nav('bulkBGV')"><span class="icon">📎</span>Bulk BGV Update</div>`;
+    document.getElementById('tAc').innerHTML='<a href="attendance-portal.html" class="btn btn-ghost btn-sm" style="text-decoration:none;">📅 Attendance</a><button class="btn btn-ghost btn-sm" id="refreshBtn" onclick="manualRefreshWithFeedback()">🔄 Refresh</button>';
     setTimeout(applyVendorLock,50);
   }
   badges();
 }
 
 function applyVendorLock(){
-  const s=document.getElementById('f_vendor');if(!s)return;
-  if(CU.locked){s.value=CU.vendor;s.disabled=true;}
-  else{s.disabled=false;s.value='';}
+  const s=document.getElementById('f_vendor');
+  const lbl=document.getElementById('f_vendor_locked');
+  if(!s)return;
+  if(CU.locked){
+    s.value=CU.vendor;s.disabled=true;s.style.display='none';
+    if(lbl){lbl.style.display='block';lbl.textContent=CU.vendor;}
+  } else {
+    s.disabled=false;s.style.display='';
+    if(lbl)lbl.style.display='none';
+  }
 }
 
 // ══════════════════════════════════════════════════
@@ -720,7 +843,7 @@ function nav(pg){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   const pe=document.getElementById('page-'+pg);if(pe)pe.classList.add('active');
   const ni=document.querySelector(`.nav-item[onclick*="'${pg}'"]`);if(ni)ni.classList.add('active');
-  const titles={dashboard:'Dashboard',proctors:'All Proctors',onboarding:'In Progress',active:'Active Proctors',offboarded:'Offboarded',addProctor:'Add New Proctor',bulkUpload:'Bulk Upload',incomplete:'Incomplete Details',audit:'Audit Log',credentials:'System Credentials',myProctors:'All Proctors'};
+  const titles={dashboard:'Dashboard',proctors:'All Proctors',onboarding:'In Progress',active:'Active Proctors',offboarded:'Offboarded',addProctor:'Add New Proctor',bulkUpload:'Bulk Upload',incomplete:'Incomplete Details',bulkBGV:'Bulk BGV Update',audit:'Audit Log',credentials:'System Credentials',myProctors:'All Proctors'};
   document.getElementById('tTl').textContent=titles[pg]||pg;
   if(pg==='dashboard')renderDash();
   if(pg==='proctors')renderPro();
@@ -729,6 +852,7 @@ function nav(pg){
   if(pg==='offboarded')renderOff();
   if(pg==='audit'){loadLogsIfNeeded().then(renderAudit);}
   if(pg==='incomplete')renderInc();
+  if(pg==='bulkBGV')renderBulkBGV();
   if(pg==='myProctors')renderMyPro();
   if(pg==='credentials')renderCreds();
   if(pg==='addProctor')setTimeout(applyVendorLock,50);
@@ -774,6 +898,7 @@ function renderPro(){
     <td class="tdi">${p.pid||'—'}</td><td class="tdn">${p.name}</td>
     <td style="font-family:'DM Mono',monospace;font-size:12px">${mask(p.aadhaar)}</td>
     <td><span class="vb ${VCL[p.vendor]}">${p.vendor}</span></td>
+    <td>${ptypeBadge(p.ptype)}</td>
     <td style="font-family:'DM Mono',monospace;font-size:12px">${p.phone}</td>
     <td>${sb(p.status)}</td><td style="color:var(--text3);font-size:12px">${fd2(p.at)}</td>
     <td><div class="ag">
@@ -783,12 +908,18 @@ function renderPro(){
 }
 
 function renderOnboard(){
-  const list=proctors.filter(p=>p.status==='In Progress'||p.status==='Verified');
+  const sq=(document.getElementById('sOnb')||{value:''}).value.toLowerCase();
+  const sv=(document.getElementById('fOnbV')||{value:''}).value;
+  const list=proctors.filter(p=>(p.status==='In Progress'||p.status==='Verified')&&
+    (!sq||(p.name||'').toLowerCase().includes(sq)||(p.pid||'').toLowerCase().includes(sq)||(p.phone||'').includes(sq))&&
+    (!sv||p.vendor===sv));
   document.getElementById('oBody').innerHTML=list.map(p=>`<tr>
+    <td><input type="checkbox" class="row-cb" data-id="${p.id}" onchange="toggleSelect('${p.id}')" style="accent-color:var(--accent);cursor:pointer;width:15px;height:15px;"/></td>
     <td class="tdn">${p.name}</td><td><span class="vb ${VCL[p.vendor]}">${p.vendor}</span></td>
+    <td><span style="font-size:11px;padding:2px 7px;border-radius:4px;background:var(--surface2);color:var(--text2)">${p.ptype||'—'}</span></td>
     <td style="font-family:'DM Mono',monospace;font-size:12px">${mask(p.aadhaar)}</td>
     <td>${sb(p.status)}</td><td style="color:var(--text3);font-size:12px">${fd2(p.at)}</td>
-    <td>${p.bgv?'<span style="color:var(--success)">✅ Uploaded</span>':'<span style="color:var(--warning)">⚠️ Missing</span>'}</td>
+    <td>${bgvBadge(p.bgv)}</td>
     <td><div class="ag">
       <button class="btn btn-ghost btn-sm" onclick="viewP('${p.id}')">👁 View</button>
       ${p.status==='In Progress'?`<button class="btn btn-success btn-sm" onclick="openVerify('${p.id}')">✅ Verify</button>`:''}
@@ -797,11 +928,17 @@ function renderOnboard(){
 }
 
 function renderActive(){
-  const list=proctors.filter(p=>p.status==='Active');
+  const sq=(document.getElementById('sAct')||{value:''}).value.toLowerCase();
+  const sv=(document.getElementById('fActV')||{value:''}).value;
+  const list=proctors.filter(p=>p.status==='Active'&&
+    (!sq||(p.name||'').toLowerCase().includes(sq)||(p.pid||'').toLowerCase().includes(sq)||(p.phone||'').includes(sq))&&
+    (!sv||p.vendor===sv));
   document.getElementById('aBody').innerHTML=list.map(p=>`<tr>
     <td class="tdi">${p.pid}</td><td class="tdn">${p.name}</td>
     <td><span class="vb ${VCL[p.vendor]}">${p.vendor}</span></td>
+    <td>${ptypeBadge(p.ptype)}</td>
     <td style="font-family:'DM Mono',monospace;font-size:12px">${p.phone}</td>
+    <td>${bgvBadge(p.bgv)}</td>
     <td style="color:var(--text3);font-size:12px">${fd2(p.aat)}</td>
     <td><div class="ag">
       <button class="btn btn-ghost btn-sm" onclick="viewP('${p.id}')">👁 View</button>
@@ -810,7 +947,11 @@ function renderActive(){
 }
 
 function renderOff(){
-  const list=proctors.filter(p=>p.status==='Offboarded');
+  const sq=(document.getElementById('sOff')||{value:''}).value.toLowerCase();
+  const sv=(document.getElementById('fOffV')||{value:''}).value;
+  const list=proctors.filter(p=>p.status==='Offboarded'&&
+    (!sq||(p.name||'').toLowerCase().includes(sq)||(p.pid||'').toLowerCase().includes(sq)||(p.phone||'').includes(sq))&&
+    (!sv||p.vendor===sv));
   document.getElementById('offBody').innerHTML=list.map(p=>`<tr>
     <td class="tdi">${p.pid}</td><td class="tdn">${p.name}</td>
     <td><span class="vb ${VCL[p.vendor]}">${p.vendor}</span></td>
@@ -931,9 +1072,10 @@ function renderMyPro(){
     <td class="tdn">${p.name}</td>
     <td style="font-family:'DM Mono',monospace;font-size:12px">${mask(p.aadhaar)}</td>
     <td><span class="vb ${VCL[p.vendor]}">${p.vendor}</span></td>
+    <td>${ptypeBadge(p.ptype)}</td>
     <td style="font-family:'DM Mono',monospace;font-size:12px">${p.phone}</td>
     <td>${sb(p.status)}</td>
-    <td>${p.bgv?'<span style="color:var(--success)">✅ Uploaded</span>':'<span style="color:var(--warning)">⚠️ Missing</span>'}</td>
+    <td>${bgvBadge(p.bgv)}</td>
     <td style="color:var(--text3);font-size:12px">${fd2(p.at)}</td>
     <td><div class="ag">
       <button class="btn btn-ghost btn-sm" onclick="viewP('${p.id}')">👁 View</button>
@@ -945,16 +1087,37 @@ function renderMyPro(){
 // INCOMPLETE TAB
 // ══════════════════════════════════════════════════
 function renderInc(){
-  const mine=proctors.filter(p=>p.by===CU.un&&!p.bgv&&p.status!=='Offboarded');
   const el=document.getElementById('incList');
-  if(!mine.length){el.innerHTML=`<div class="empty"><div class="ei">✅</div><h3>All complete!</h3><p>No proctors with missing BGV documents.</p></div>`;return;}
-  el.innerHTML=mine.map(p=>`<div class="inc-card">
+  if(!el)return;
+  // Hide vendor filter for locked vendor uploaders
+  const vf=document.getElementById('fIncVendor');
+  if(vf)vf.style.display=CU.locked?'none':'';
+  const sq=(document.getElementById('sInc')||{value:''}).value.toLowerCase();
+  const fSt=(document.getElementById('fIncStatus')||{value:''}).value;
+  const fV=CU.locked?CU.vendor:(document.getElementById('fIncVendor')||{value:''}).value;
+  // All proctors missing BGV — admin sees all, others see their vendor
+  const isAdmin=CU.role==='admin';
+  const isTalview=CU.role==='talview';
+  let list=proctors.filter(p=>!p.bgv);
+  if(!isAdmin&&!isTalview) list=list.filter(p=>p.vendor===CU.vendor);
+  if(fSt) list=list.filter(p=>p.status===fSt);
+  if(fV)  list=list.filter(p=>p.vendor===fV);
+  if(sq)  list=list.filter(p=>(p.name||'').toLowerCase().includes(sq)||(p.vendor||'').toLowerCase().includes(sq));
+  // Sort: Active first, then Verified, In Progress, Offboarded
+  const order={'Active':0,'Verified':1,'In Progress':2,'Offboarded':3};
+  list.sort((a,b)=>(order[a.status]||9)-(order[b.status]||9));
+  if(!list.length){
+    el.innerHTML=`<div class="empty"><div class="ei">✅</div><h3>All complete!</h3><p>No proctors with missing BGV documents.</p></div>`;
+    badges();return;
+  }
+  el.innerHTML=list.map(p=>`<div class="inc-card">
     <div style="flex:1;">
-      <div class="inc-name">${p.name}</div>
-      <div class="inc-meta"><span class="vb ${VCL[p.vendor]}" style="margin-right:8px;">${p.vendor}</span>Aadhaar: ${mask(p.aadhaar)} · Phone: ${p.phone} · Added: ${fd2(p.at)}</div>
-      <div style="margin-top:6px;">${sb(p.status)} <span style="color:var(--danger);font-size:12px;margin-left:8px;">⚠️ BGV document missing</span></div>
+      <div class="inc-name">${p.name}${p.pid?` <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);margin-left:6px;">${p.pid}</span>`:''}
+      </div>
+      <div class="inc-meta"><span class="vb ${VCL[p.vendor]}" style="margin-right:8px;">${p.vendor}</span>${ptypeBadge(p.ptype)}<span style="margin-left:8px;">Aadhaar: ${mask(p.aadhaar)} · Phone: ${p.phone} · Added: ${fd2(p.at)}</span></div>
+      <div style="margin-top:6px;display:flex;align-items:center;gap:10px;">${sb(p.status)}<span style="color:var(--warning);font-size:12px;">⚠️ BGV missing</span></div>
     </div>
-    <button class="btn btn-primary btn-sm" onclick="openBGV('${p.id}')">📎 Add BGV</button>
+    ${p.status!=='Offboarded'?`<button class="btn btn-primary btn-sm" onclick="openBGV('${p.id}')">📎 Add BGV</button>`:'<span style="font-size:11px;color:var(--text3);">Offboarded</span>'}
   </div>`).join('');
   badges();
 }
@@ -1000,8 +1163,9 @@ function viewP(id){
       <div class="di"><label>Aadhaar</label><div class="val" style="font-family:'DM Mono',monospace">${isA?p.aadhaar:mask(p.aadhaar)}</div></div>
       <div class="di"><label>Vendor</label><div class="val"><span class="vb ${VCL[p.vendor]}">${p.vendor}</span></div></div>
       <div class="di"><label>Status</label><div class="val">${sb(p.status)}</div></div>
-      <div class="di"><label>DOB</label><div class="val">${p.dob||'—'}</div></div>
+      <div class="di"><label>DOB</label><div class="val">${fDOB(p.dob)}</div></div>
       <div class="di"><label>Gender</label><div class="val">${p.gender||'—'}</div></div>
+      <div class="di"><label>Proctor Type</label><div class="val">${p.ptype||'—'}</div></div>
       <div class="di"><label>Phone</label><div class="val">${p.phone}</div></div>
       <div class="di"><label>Email</label><div class="val">${p.email||'—'}</div></div>
       <div class="di" style="grid-column:span 2"><label>Address</label><div class="val">${[p.address,p.city,p.state].filter(Boolean).join(', ')||'—'}</div></div>
@@ -1052,7 +1216,12 @@ function editP(id){
       <div class="form-group"><label>Aadhaar <span class="req">*</span></label><input id="ef_a" value="${p.aadhaar}" maxlength="12"/></div>
       <div class="form-group"><label>DOB</label><input id="ef_d" type="date" value="${p.dob||''}"/></div>
       <div class="form-group"><label>Gender</label><select id="ef_g"><option value="">Select</option>${['Male','Female','Other'].map(g=>`<option ${p.gender===g?'selected':''}>${g}</option>`).join('')}</select></div>
-      <div class="form-group"><label>Vendor</label><select id="ef_v">${VENDORS.map(v=>`<option ${p.vendor===v?'selected':''}>${v}</option>`).join('')}</select></div>
+      <div class="form-group"><label>Vendor</label>
+        ${CU.locked
+          ? `<div style="padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-size:13px;font-weight:600;">${p.vendor}</div><input type="hidden" id="ef_v" value="${p.vendor}"/>`
+          : `<select id="ef_v">${VENDORS.map(v=>`<option ${p.vendor===v?'selected':''}>${v}</option>`).join('')}</select>`
+        }
+      </div>
     </div>
     <div class="sec-t">Contact</div>
     <div class="fg2" style="margin-bottom:16px;">
@@ -1064,6 +1233,7 @@ function editP(id){
     </div>
     <div class="sec-t">Documents</div>
     <div class="fg2" style="margin-bottom:16px;">
+      <div class="form-group"><label>Proctor Type</label><select id="ef_pt"><option value="">Select</option><option value="WFO" ${p.ptype==='WFO'?'selected':''}>WFO</option><option value="ODP" ${p.ptype==='ODP'?'selected':''}>ODP</option><option value="Hybrid" ${p.ptype==='Hybrid'?'selected':''}>Hybrid</option></select></div>
       <div class="form-group"><label>BGV Link</label><input id="ef_bg" value="${p.bgv||''}"/></div>
       <div class="form-group"><label>NDA Link</label><input id="ef_nd" value="${p.nda||''}"/></div>
     </div>
@@ -1077,6 +1247,7 @@ async function saveEdit(){
   if(aadhaar&&proctors.some(x=>x.id!==id&&x.aadhaar===aadhaar)){toast('Aadhaar already exists for another proctor','error');return;}
   p.name=name;p.aadhaar=aadhaar;p.dob=gv('ef_d');p.gender=gv('ef_g');p.vendor=gv('ef_v');
   p.phone=gv('ef_ph');p.email=gv('ef_em');p.address=gv('ef_ad');p.city=gv('ef_ci');p.state=gv('ef_st');
+  p.ptype=gv('ef_pt')||p.ptype||'';
   p.bgv=gv('ef_bg');p.nda=gv('ef_nd');p.notes=gv('ef_no');p.upd=new Date().toISOString();
   showLoading(true);
   await saveProctor(p, false);
@@ -1100,7 +1271,7 @@ function setE(fi,ei,msg){
 async function submitProctor(){
   clrErr();let ok=true;
   const v=id=>(document.getElementById(id)?.value?.trim()||'');
-  const name=v('f_name'),aadhaar=v('f_aadhaar'),dob=v('f_dob'),gender=v('f_gender'),
+  const name=v('f_name'),aadhaar=String(v('f_aadhaar')).replace(/\.0+$/,'').trim(),dob=v('f_dob'),gender=v('f_gender'),ptype=v('f_ptype'),
     vendor=CU.locked?CU.vendor:v('f_vendor'),
     phone=v('f_phone'),email=v('f_email'),address=v('f_address'),
     city=v('f_city'),state=v('f_state'),nda=v('f_nda');
@@ -1110,6 +1281,7 @@ async function submitProctor(){
   else if(!/^\d{12}$/.test(aadhaar)){setE('f_aadhaar','e_aadhaar','Must be exactly 12 digits');ok=false;}
   if(!dob)          {setE('f_dob','e_dob','Date of Birth is required');ok=false;}
   if(!gender)       {setE('f_gender','e_gender','Gender is required');ok=false;}
+  if(!ptype)        {setE('f_ptype','e_ptype','Proctor type is required');ok=false;}
   if(!vendor)       {setE('f_vendor','e_vendor','Vendor is required');ok=false;}
   if(!phone)        {setE('f_phone','e_phone','Mobile number is required');ok=false;}
   else if(!/^\d{10}$/.test(phone)){setE('f_phone','e_phone','Must be 10 digits');ok=false;}
@@ -1135,7 +1307,7 @@ async function submitProctor(){
   const de=proctors.find(p=>p.email.toLowerCase()===email.toLowerCase());
   if(de){setE('f_email','e_email','⚠️ Duplicate — already exists: '+de.name+' ('+de.vendor+')');return;}
 
-  const p={id:'p'+Date.now(),pid:'',name,aadhaar,vendor,phone,email,address,city,state,dob,gender,
+  const p={id:'p'+Date.now(),pid:'',name,aadhaar,vendor,phone,email,address,city,state,dob,gender,ptype,
     bgv:v('f_bgv'),nda,notes:v('f_notes'),
     status:'In Progress',stage:1,by:CU.un,
     at:new Date().toISOString(),upd:new Date().toISOString(),
@@ -1156,6 +1328,7 @@ async function submitProctor(){
 function clearForm(){
   ['f_name','f_aadhaar','f_dob','f_phone','f_email','f_address','f_city','f_state','f_bgv','f_nda','f_notes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   const g=document.getElementById('f_gender');if(g)g.selectedIndex=0;
+  const pt=document.getElementById('f_ptype');if(pt)pt.selectedIndex=0;
   if(!CU?.locked){const vnd=document.getElementById('f_vendor');if(vnd)vnd.selectedIndex=0;}
   clrErr();
 }
@@ -1164,10 +1337,20 @@ function clearForm(){
 // BULK UPLOAD
 // ══════════════════════════════════════════════════
 function dlTpl(){
-  const h='name,aadhaar,dob,gender,vendor,phone,email,address,city,state,nda_link,bgv_link,notes';
-  const ex='John Doe,123456789012,1990-01-01,Male,Sai,9876543210,john@gmail.com,123 Main St,Mumbai,Maharashtra,https://sharepoint.com/nda,,';
-  const blob=new Blob([h+'\n'+ex],{type:'text/csv'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='proctor_upload_template.csv';a.click();
+  const BOM=String.fromCharCode(0xFEFF);
+  if(CU.locked){
+    // Vendor uploader — no vendor column, vendor is injected automatically
+    const h='name,aadhaar,dob,gender,ptype,phone,email,address,city,state,nda_link,bgv_link,notes';
+    const ex='"John Doe","123456789012","1990-01-01","Male","ODP","9876543210","john@gmail.com","123 Main St","Mumbai","Maharashtra","https://sharepoint.com/nda","",""';
+    const blob=new Blob([BOM+h+'\n'+ex],{type:'text/csv;charset=utf-8'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='proctor_upload_template_'+CU.vendor+'.csv';a.click();
+  } else {
+    // Admin/Talview — includes vendor column
+    const h='name,aadhaar,dob,gender,ptype,vendor,phone,email,address,city,state,nda_link,bgv_link,notes';
+    const ex='"John Doe","123456789012","1990-01-01","Male","ODP","Sai","9876543210","john@gmail.com","123 Main St","Mumbai","Maharashtra","https://sharepoint.com/nda","",""';
+    const blob=new Blob([BOM+h+'\n'+ex],{type:'text/csv;charset=utf-8'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='proctor_upload_template.csv';a.click();
+  }
   toast('Template downloaded','success');
 }
 
@@ -1207,6 +1390,15 @@ function handleBulk(e){
     const raw  = parsed.slice(1).map(row=>{
       const obj={};
       hdrs.forEach((h,i)=>obj[h]=(row[i]||'').trim());
+      // Normalise Aadhaar and Phone — Excel often saves long numbers
+      // as scientific notation in CSV e.g. 4.51279E+11 → 451279000000
+      ['aadhaar','phone'].forEach(field=>{
+        if(obj[field]&&/^[\d.]+[eE][+\-]?\d+$/.test(obj[field])){
+          obj[field]=Math.round(Number(obj[field])).toString();
+        }
+        // Also strip any decimal like 451279000000.0
+        obj[field]=(obj[field]||'').replace(/\.0+$/,'').trim();
+      });
       return obj;
     });
     // Don't silently drop rows with missing name — keep them so validation shows the error
@@ -1222,78 +1414,96 @@ function validateBulk(raw){
   const lv=CU.locked?CU.vendor:null;
   // Track within-file duplicates
   const sA={},sP={},sE={};
-  // Build fast lookup sets from live proctors array
-  const dbAadhaar = new Set(proctors.map(p=>p.aadhaar));
-  const dbPhone   = new Set(proctors.map(p=>p.phone));
-  const dbEmail   = new Set(proctors.map(p=>(p.email||'').toLowerCase()));
 
   bulkVal=raw.map((r,idx)=>{
     const errs=[];
     if(!r.name||r.name.trim()==='')errs.push('Missing name — check CSV column alignment');
-    if(!r.aadhaar||!/^\d{12}$/.test(r.aadhaar))errs.push('Invalid Aadhaar (12 digits required)');
+    if(!r.aadhaar||!/^\d{12}$/.test(r.aadhaar))errs.push('Invalid Aadhaar (must be exactly 12 digits — format column as Text in Excel before saving)');
     if(!r.dob)errs.push('Missing DOB');
     if(!r.gender)errs.push('Missing gender');
-    const vend=lv||r.vendor;
-    if(!VENDORS.includes(vend))errs.push('Invalid vendor: '+r.vendor);
-    if(!r.phone||!/^\d{10}$/.test(r.phone))errs.push('Invalid phone (10 digits required)');
+    if(!r.ptype||!['WFO','ODP','Hybrid'].includes(r.ptype))errs.push('Invalid proctor type (must be WFO, ODP, or Hybrid)');
+    // Vendor: locked users get their vendor injected; if CSV has vendor col check it matches
+    let vend;
+    if(lv){
+      vend=lv;
+      if(r.vendor&&r.vendor.trim()&&r.vendor.trim()!==lv)
+        errs.push('Vendor mismatch — you can only upload for '+lv+' but row says "'+r.vendor.trim()+'"');
+    } else {
+      vend=r.vendor;
+      if(!VENDORS.includes(vend))errs.push('Invalid vendor: "'+r.vendor+'"');
+    }
+    if(!r.phone||!/^\d{10}$/.test(r.phone))errs.push('Invalid phone (must be 10 digits)');
     if(!r.email||!r.email.includes('@'))errs.push('Invalid email');
     if(!r.address)errs.push('Missing address');
     if(!r.city)errs.push('Missing city');
     if(!r.state)errs.push('Missing state');
     if(!r.nda_link)errs.push('Missing NDA link');
 
-    // ── Check against live database ──
+    // ── Duplicates against live database ──
     const ak=r.aadhaar, pk=r.phone, ek=(r.email||'').toLowerCase();
-    if(ak&&/^\d{12}$/.test(ak)){
-      const d=proctors.find(p=>p.aadhaar===ak);
-      if(d) errs.push('Aadhaar already in database — '+d.name+' ('+d.vendor+')');
-    }
-    if(pk&&/^\d{10}$/.test(pk)){
-      const d=proctors.find(p=>p.phone===pk);
-      if(d) errs.push('Phone already in database — '+d.name+' ('+d.vendor+')');
-    }
-    if(ek&&r.email.includes('@')){
-      const d=proctors.find(p=>(p.email||'').toLowerCase()===ek);
-      if(d) errs.push('Email already in database — '+d.name+' ('+d.vendor+')');
-    }
+    if(ak&&/^\d{12}$/.test(ak)){const d=proctors.find(p=>p.aadhaar===ak);if(d)errs.push('Aadhaar already in database ('+d.name+', '+d.vendor+')');}
+    if(pk&&/^\d{10}$/.test(pk)){const d=proctors.find(p=>p.phone===pk);if(d)errs.push('Phone already in database ('+d.name+', '+d.vendor+')');}
+    if(ek&&r.email.includes('@')){const d=proctors.find(p=>(p.email||'').toLowerCase()===ek);if(d)errs.push('Email already in database ('+d.name+', '+d.vendor+')');}
 
-    // ── Check within the file itself ──
-    if(ak){if(sA[ak])errs.push('Aadhaar repeated in this file — row '+(sA[ak]+1));else sA[ak]=idx+1;}
-    if(pk){if(sP[pk])errs.push('Phone repeated in this file — row '+(sP[pk]+1));else sP[pk]=idx+1;}
-    if(ek){if(sE[ek])errs.push('Email repeated in this file — row '+(sE[ek]+1));else sE[ek]=idx+1;}
+    // ── Duplicates within the file ──
+    if(ak){if(sA[ak])errs.push('Aadhaar repeated in this file (row '+(sA[ak]+1)+')');else sA[ak]=idx+1;}
+    if(pk){if(sP[pk])errs.push('Phone repeated in this file (row '+(sP[pk]+1)+')');else sP[pk]=idx+1;}
+    if(ek){if(sE[ek])errs.push('Email repeated in this file (row '+(sE[ek]+1)+')');else sE[ek]=idx+1;}
 
     return{...r,_v:vend,_ok:errs.length===0,_errs:errs};
   });
 
-  const dupCount  = bulkVal.filter(r=>r._errs.some(e=>e.includes('already in database')||e.includes('repeated in this file'))).length;
-  const skipCount = bulkVal.filter(r=>!r._ok).length;
-  if(dupCount>0) toast(dupCount+' duplicate(s) found and will be skipped','warning');
   renderBulkPrev();
 }
 
 function renderBulkPrev(){
   const ok=bulkVal.filter(r=>r._ok),sk=bulkVal.filter(r=>!r._ok);
-  let html=`<div class="al ${ok.length?'al-i':'al-d'}">
-    <strong>${bulkVal.length}</strong> rows found —
-    <strong style="color:var(--success)">${ok.length} will be uploaded</strong>
-    ${sk.length?`, <strong style="color:var(--danger)">${sk.length} will be skipped</strong> (duplicate or invalid)`:''}
-  </div>`;
-  if(sk.length){
-    html+=`<div class="al al-d"><strong>⚠️ Skipped rows — these will NOT be uploaded:</strong><br><br>`;
-    sk.forEach(r=>{html+=`<div style="margin-bottom:8px;padding:8px 12px;background:rgba(248,113,113,.07);border-radius:6px;"><strong>${r.name||'(unnamed)'}</strong> — <span style="font-size:12px">${r._errs.join(' · ')}</span></div>`;});
+  const hasErrors=sk.length>0;
+  let html='';
+  if(hasErrors){
+    // ANY error = entire file blocked
+    html+=`<div class="al al-d" style="margin-bottom:12px;">
+      <strong>❌ Upload blocked — ${sk.length} error(s) found in ${bulkVal.length} row(s)</strong><br>
+      <span style="font-size:13px;color:var(--text2);">Fix ALL errors in your CSV and re-upload. No rows have been saved.</span>
+    </div>`;
+    html+=`<div class="al al-d"><strong>Errors to fix:</strong><br><br>`;
+    sk.forEach(r=>{html+=`<div style="margin-bottom:8px;padding:8px 12px;background:rgba(248,113,113,.07);border-radius:6px;"><strong>Row: ${r.name||'(unnamed)'}</strong> — <span style="font-size:12px;color:var(--danger)">${r._errs.join(' · ')}</span></div>`;});
     html+=`</div>`;
+  } else {
+    html+=`<div class="al al-i" style="margin-bottom:12px;">
+      <strong>✅ All ${ok.length} rows valid — ready to upload</strong>
+    </div>`;
   }
-  html+=`<div class="tw" style="max-height:260px;overflow-y:auto;"><table><thead><tr><th>#</th><th>Name</th><th>Vendor</th><th>Phone</th><th>Aadhaar</th><th>Result</th></tr></thead><tbody>
+  html+=`<div class="tw" style="max-height:260px;overflow-y:auto;"><table><thead><tr><th>#</th><th>Name</th><th>Vendor</th><th>Phone</th><th>Aadhaar</th><th>Status</th></tr></thead><tbody>
     ${bulkVal.map((r,i)=>`<tr class="${r._ok?'row-ok':'row-sk'}">
       <td style="color:var(--text3);font-size:12px">${i+1}</td>
       <td class="tdn">${r.name||'—'}</td><td>${r._v||r.vendor||'—'}</td>
       <td style="font-family:'DM Mono',monospace;font-size:12px">${r.phone||'—'}</td>
       <td style="font-family:'DM Mono',monospace;font-size:12px">${r.aadhaar?mask(r.aadhaar):'—'}</td>
-      <td><span class="dtag ${r._ok?'dtag-ok':'dtag-sk'}">${r._ok?'✅ Upload':'❌ Skip'}</span></td>
+      <td><span class="dtag ${r._ok?'dtag-ok':'dtag-sk'}">${r._ok?'✅ OK':'❌ Error'}</span></td>
     </tr>`).join('')}
   </tbody></table></div>`;
+  if(hasErrors){
+    html+=`<div style="margin-top:16px;display:flex;gap:10px;">
+      <button class="btn btn-primary" onclick="retryBulkUpload()">📂 Upload corrected file</button>
+      <button class="btn btn-ghost" onclick="clearBulkUpload()">✕ Clear</button>
+    </div>`;
+  }
   document.getElementById('bPrev').innerHTML=html;
-  document.getElementById('bAct').style.display=ok.length?'block':'none';
+  // Only show confirm button if ALL rows valid
+  document.getElementById('bAct').style.display=(!hasErrors&&ok.length)?'block':'none';
+}
+
+function retryBulkUpload(){
+  // Reset file input and trigger click so user can pick corrected file
+  const inp=document.getElementById('bFile');
+  if(inp){inp.value='';inp.click();}
+}
+function clearBulkUpload(){
+  bulkVal=[];
+  document.getElementById('bPrev').innerHTML='';
+  document.getElementById('bAct').style.display='none';
+  const inp=document.getElementById('bFile');if(inp)inp.value='';
 }
 
 async function confirmBulk(){
@@ -1306,7 +1516,7 @@ async function confirmBulk(){
     id:'p'+Date.now()+Math.random(),pid:'',
     name:r.name,aadhaar:r.aadhaar,vendor:r._v,
     phone:r.phone,email:r.email,address:r.address,
-    city:r.city,state:r.state,dob:r.dob,gender:r.gender,
+    city:r.city,state:r.state,dob:r.dob,gender:r.gender,ptype:r.ptype||'',
     bgv:r.bgv_link||'',nda:r.nda_link||'',notes:r.notes||'',
     status:'In Progress',stage:1,by:CU.un,
     at:new Date().toISOString(),upd:new Date().toISOString(),
@@ -1381,9 +1591,13 @@ async function confirmVerify(){
 function openAssign(id){
   if(CU.role!=='admin'){toast('No permission','error');return;}
   const p=proctors.find(x=>x.id===id);if(!p)return;
-  const code=VC[p.vendor]||p.vendor.substring(0,3).toUpperCase();
-  const cnt=proctors.filter(x=>x.vendor===p.vendor&&x.pid).length;
-  const nid=`${code}-${String(cnt+1).padStart(4,'0')}`;
+  const code=(VC[p.vendor]||p.vendor.substring(0,3).toUpperCase());
+  // Find highest existing number for this prefix to guarantee no collision
+  let maxN=0;
+  proctors.filter(x=>x.pid&&x.pid.startsWith(code+'-')).forEach(x=>{
+    const m=x.pid.match(/-(\d+)$/);if(m)maxN=Math.max(maxN,parseInt(m[1]));
+  });
+  const nid=`${code}-${String(maxN+1).padStart(4,'0')}`;
   CA={aId:id,gId:nid};
   document.getElementById('aNm').textContent=p.name+' ('+p.vendor+')';
   document.getElementById('aId').value=nid;om('mAsg');
@@ -1447,9 +1661,211 @@ function exportCSV(){
 // ══════════════════════════════════════════════════
 const gv=id=>document.getElementById(id)?.value?.trim()||'';
 const mask=a=>(!a||a.length<4)?a||'—':'XXXX-XXXX-'+a.slice(-4);
-const sb=s=>{const m={'In Progress':['b-ip'],'Verified':['b-ve'],'Active':['b-ac'],'Offboarded':['b-of']};const[c]=m[s]||[''];return`<span class="badge ${c}"><span class="bdot"></span>${s}</span>`;};
+const sb=s=>{const m={'In Progress':['b-ip'],'Verified':['b-ve'],'Active':['b-ac'],'Offboarded':['b-of']};const[c]=m[s]||[''];return`<span class="badge ${c}"><span class="bdot"></span>${s||'—'}</span>`;};
+const bgvBadge=v=>v
+  ?'<span style="color:var(--success);font-size:12px;">✅ Uploaded</span>'
+  :'<span style="color:var(--warning);font-size:12px;font-weight:600;">⚠️ Pending</span>';
+
+function showBulkProgress(title,total){
+  const p=document.getElementById('bulkProgressPanel');
+  document.getElementById('bpTitle').textContent=title;
+  document.getElementById('bpCount').textContent='0 / '+total;
+  document.getElementById('bpBar').style.width='0%';
+  document.getElementById('bpStatus').textContent='Starting...';
+  p.style.display='block';
+}
+function updateBulkProgress(done,total,msg){
+  const pct=Math.round(done/total*100);
+  document.getElementById('bpCount').textContent=done+' / '+total;
+  document.getElementById('bpBar').style.width=pct+'%';
+  document.getElementById('bpStatus').textContent=msg||'';
+}
+function hideBulkProgress(){
+  document.getElementById('bpBar').style.width='100%';
+  document.getElementById('bpStatus').textContent='Done ✓';
+  setTimeout(()=>document.getElementById('bulkProgressPanel').style.display='none',2000);
+}
+
+const ptypeBadge=t=>{if(!t||t==='—')return'<span style="color:var(--text3);font-size:12px;">—</span>';const s={'WFO':'background:rgba(96,165,250,.12);color:var(--info)','ODP':'background:rgba(110,231,183,.12);color:var(--success)','Hybrid':'background:rgba(167,139,250,.12);color:var(--accent5)'};return`<span style="display:inline-flex;align-items:center;padding:2px 9px;border-radius:4px;font-size:11px;font-weight:600;${s[t]||''}">${t}</span>`;};
 const fd2=iso=>!iso?'—':new Date(iso).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
 const fdt=iso=>!iso?'—':new Date(iso).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+const fDOB=v=>{if(!v||v==='—')return'—';try{const d=new Date(v);if(isNaN(d))return v;return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}catch(e){return v;}};
+// ══ BULK ACTIONS ═══════════════════════════════════════
+function toggleSelect(id){
+  if(selectedIds.has(id))selectedIds.delete(id);else selectedIds.add(id);
+  updateBulkBar();
+}
+function toggleSelectAll(checked){
+  document.querySelectorAll('.row-cb').forEach(cb=>{
+    cb.checked=checked;
+    if(checked)selectedIds.add(cb.dataset.id);else selectedIds.delete(cb.dataset.id);
+  });
+  updateBulkBar();
+}
+function updateBulkBar(){
+  const bar=document.getElementById('bulkBar');
+  const cnt=document.getElementById('selCount');
+  if(!bar)return;
+  if(selectedIds.size>0){bar.style.display='flex';cnt.textContent=selectedIds.size+' selected';}
+  else bar.style.display='none';
+}
+function clearSelection(){
+  selectedIds.clear();
+  document.querySelectorAll('.row-cb').forEach(cb=>cb.checked=false);
+  const a=document.getElementById('selectAll');if(a)a.checked=false;
+  updateBulkBar();
+}
+async function bulkVerify(){
+  const eligible=proctors.filter(p=>selectedIds.has(p.id)&&p.status==='In Progress');
+  if(!eligible.length){toast('No In Progress proctors selected','error');return;}
+  if(!confirm('Verify '+eligible.length+' proctor(s)?'))return;
+  showBulkProgress('Verifying proctors...',eligible.length);
+  const BATCH=4;let done=0;
+  for(let i=0;i<eligible.length;i+=BATCH){
+    const batch=eligible.slice(i,i+BATCH);
+    await Promise.all(batch.map(async p=>{
+      p.status='Verified';p.stage=2;p.vby=CU.un;p.vat=new Date().toISOString();p.upd=new Date().toISOString();
+      await saveProctor(p,false);
+      addLog('Verified',p.name,'Bulk verified by '+CU.un);
+      done++;updateBulkProgress(done,eligible.length,p.name+' verified');
+    }));
+  }
+  hideBulkProgress();clearSelection();
+  toast(eligible.length+' proctor(s) verified!','success');
+  renderOnboard();badges();
+}
+async function bulkAssignIDs(){
+  const eligible=proctors.filter(p=>selectedIds.has(p.id)&&p.status==='Verified');
+  if(!eligible.length){toast('No Verified proctors selected','error');return;}
+  if(!confirm('Assign IDs and activate '+eligible.length+' proctor(s)?'))return;
+  const VC2={'Sai':'SAI','TSN':'TSN','Avner':'AVN','A&M':'ANM','Atura':'ATU','Awign':'AWG'};
+  // Build per-vendor max counters from ALL existing PIDs (including ones being assigned this run)
+  const vendorMax={};
+  proctors.filter(x=>x.pid).forEach(x=>{
+    const code=VC2[x.vendor]||x.vendor.substring(0,3).toUpperCase();
+    const m=x.pid.match(/-(\d+)$/);
+    const n=m?parseInt(m[1]):0;
+    if(!vendorMax[code]||n>vendorMax[code])vendorMax[code]=n;
+  });
+  const usedPids=new Set(proctors.map(x=>x.pid).filter(Boolean));
+  // Pre-assign all PIDs serially first (guarantees uniqueness before any parallel writes)
+  const now=new Date().toISOString();
+  for(const p of eligible){
+    const code=VC2[p.vendor]||p.vendor.substring(0,3).toUpperCase();
+    vendorMax[code]=(vendorMax[code]||0)+1;
+    let candidate=code+'-'+String(vendorMax[code]).padStart(4,'0');
+    while(usedPids.has(candidate)){vendorMax[code]++;candidate=code+'-'+String(vendorMax[code]).padStart(4,'0');}
+    p.pid=candidate;usedPids.add(candidate);
+    p.status='Active';p.stage=3;p.aat=now;p.upd=now;
+  }
+  // Parallel batch writes to sheet
+  showBulkProgress('Assigning IDs & activating...',eligible.length);
+  const BATCH=4;let done=0;
+  for(let i=0;i<eligible.length;i+=BATCH){
+    const batch=eligible.slice(i,i+BATCH);
+    await Promise.all(batch.map(async p=>{
+      await saveProctor(p,false);
+      addLog('ID Assigned',p.name,'Bulk: ID '+p.pid);
+      done++;updateBulkProgress(done,eligible.length,p.pid+' → '+p.name);
+    }));
+  }
+  hideBulkProgress();clearSelection();
+  toast(eligible.length+' proctor(s) activated!','success');
+  renderOnboard();badges();
+}
+async function reOnboardProctor(existingId,newData){
+  let p=proctors.find(x=>x.id===existingId)||{id:existingId};
+  p.status='In Progress';p.stage=1;p.pid='';
+  p.bgv=newData.bgv||p.bgv||'';p.nda=newData.nda||p.nda||'';
+  p.ptype=newData.ptype||p.ptype||'';p.notes=newData.notes||p.notes||'';
+  p.upd=new Date().toISOString();p.vby='';p.vat=null;p.aat=null;p.oat=null;p.or='';p.on='';
+  if(!proctors.find(x=>x.id===existingId))proctors.push(p);
+  showLoading(true);
+  await saveProctor(p,false);
+  addLog('Re-onboarded',p.name,'Re-onboarded by '+CU.un);
+  showLoading(false);
+  toast(p.name+' re-onboarded! Status reset to In Progress.','success');
+  badges();nav('onboarding');
+}
+
+// ══ EXPORT PER TAB ══════════════════════════════════════
+function exportTabCSV(tab){
+  let list;
+  if(tab==='onboarding')list=proctors.filter(p=>p.status==='In Progress'||p.status==='Verified');
+  else if(tab==='active')list=proctors.filter(p=>p.status==='Active');
+  else if(tab==='offboarded')list=proctors.filter(p=>p.status==='Offboarded');
+  else list=proctors;
+  const BOM=String.fromCharCode(0xFEFF);
+  const hdr='Proctor ID,Name,Vendor,Type,Phone,Email,City,State,Status,BGV,NDA,Created,Activated,Offboarded';
+  const rows=list.map(p=>[p.pid||'',p.name,p.vendor,p.ptype||'',p.phone,p.email,p.city,p.state,
+    p.status,p.bgv?'Yes':'No',p.nda?'Yes':'No',fd2(p.at),fd2(p.aat),fd2(p.oat)].join(','));
+  const blob=new Blob([BOM+hdr+'\n'+rows.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='proctors_'+tab+'_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+  toast('Exported '+list.length+' proctors','success');
+}
+
+// ══ BULK BGV ════════════════════════════════════════════
+function dlBGVTpl(){
+  const BOM=String.fromCharCode(0xFEFF);
+  const h='proctor_id,bgv_link';
+  const ex='"SAI-0001","https://sharepoint.com/bgv/link"';
+  const blob=new Blob([BOM+h+'\n'+ex],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='bgv_template.csv';a.click();
+  toast('BGV template downloaded','success');
+}
+function handleBulkBGV(e){
+  const file=e.target.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    const parsed=parseCSV(ev.target.result);
+    if(parsed.length<2){toast('File empty','error');return;}
+    const hdrs=parsed[0].map(h=>h.toLowerCase().trim());
+    const raw=parsed.slice(1).map(row=>{const obj={};hdrs.forEach((h,i)=>obj[h]=(row[i]||'').trim());return obj;});
+    const results=raw.map(r=>{
+      const pid=(r.proctor_id||'').trim().toUpperCase();
+      const bgv=(r.bgv_link||'').trim();
+      const errs=[];
+      if(!pid)errs.push('Missing proctor ID');
+      if(!bgv)errs.push('Missing BGV link');
+      const p=proctors.find(x=>x.pid&&x.pid.toUpperCase()===pid);
+      if(pid&&!p)errs.push('ID not found: '+pid);
+      return{pid,bgv,name:p?p.name:'Not found',_ok:errs.length===0,_errs:errs,_p:p};
+    });
+    const ok=results.filter(r=>r._ok).length;
+    let html=`<div class="al ${ok?'al-i':'al-d'}"><strong>${ok}</strong> will update, <strong style="color:var(--danger)">${results.length-ok}</strong> skipped</div>`;
+    html+=`<div class="tw"><table><thead><tr><th>Proctor ID</th><th>Name</th><th>Result</th></tr></thead><tbody>`;
+    results.forEach(r=>html+=`<tr><td style="font-family:monospace;font-size:12px">${r.pid||'—'}</td><td>${r.name}</td><td><span class="dtag ${r._ok?'dtag-ok':'dtag-sk'}">${r._ok?'✅ Update':'❌ '+r._errs.join(', ')}</span></td></tr>`);
+    html+='</tbody></table></div>';
+    document.getElementById('bgvPrev').innerHTML=html;
+    document.getElementById('bgvAct').style.display=ok?'block':'none';
+    window._bgvResults=results;
+  };
+  r.readAsText(file);
+}
+async function confirmBulkBGV(){
+  const ok=(window._bgvResults||[]).filter(r=>r._ok);
+  if(!ok.length){toast('No valid rows','error');return;}
+  showLoading(true);
+  for(const row of ok){
+    row._p.bgv=row.bgv;row._p.upd=new Date().toISOString();
+    await saveProctor(row._p,false);
+    addLog('BGV Added',row._p.name,'Bulk BGV by '+CU.un);
+  }
+  showLoading(false);
+  document.getElementById('bgvPrev').innerHTML='';
+  document.getElementById('bgvAct').style.display='none';
+  document.getElementById('bgvFile').value='';
+  window._bgvResults=null;
+  toast(ok.length+' BGV links updated!','success');badges();
+}
+function renderBulkBGV(){
+  const el=document.getElementById('bgvPrev');
+  if(el)el.innerHTML='';
+  const act=document.getElementById('bgvAct');
+  if(act)act.style.display='none';
+}
+
 function addLog(action,target,det){
   const entry={id:'l'+Date.now(),ts:new Date().toISOString(),user:CU?.un||'system',action,target,det};
   logs.push(entry);
@@ -1552,18 +1968,19 @@ async function silentRefresh(force=false) {
 
 function badges(){
   if(!CU)return;
+  // nb-inc applies to ALL roles — compute once
+  const isAdminOrTv=CU.role==='admin'||CU.role==='talview';
+  const incCount=proctors.filter(p=>!p.bgv&&(isAdminOrTv||p.vendor===CU.vendor)).length;
+  const nbInc=document.getElementById('nb-inc');if(nbInc)nbInc.textContent=incCount;
+
   if(CU.role==='admin'){
     const a=document.getElementById('nb-all');if(a)a.textContent=proctors.length;
     const b=document.getElementById('nb-ip');if(b)b.textContent=proctors.filter(p=>p.status==='In Progress'||p.status==='Verified').length;
     const c=document.getElementById('nb-act');if(c)c.textContent=proctors.filter(p=>p.status==='Active').length;
   } else {
     const isTalview=CU.role==='talview';
-    const mine = isTalview
-      ? proctors
-      : proctors.filter(p=>p.vendor===CU.vendor);
+    const mine=isTalview?proctors:proctors.filter(p=>p.vendor===CU.vendor);
     const e=document.getElementById('nb-mine');if(e)e.textContent=mine.length;
-    const f=document.getElementById('nb-inc');
-    if(f)f.textContent=proctors.filter(p=>p.by===CU.un&&!p.bgv&&p.status!=='Offboarded').length;
   }
 }
 
@@ -1577,7 +1994,7 @@ function toast(msg,type='info'){
 
 document.querySelectorAll('.mo').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 
-// Show config warning on load if not set up
+// cfgWarning + session restore both handled in the DOMContentLoaded above
 window.addEventListener('DOMContentLoaded',()=>{
   if(GS_CONFIG.APPS_SCRIPT_URL==='YOUR_APPS_SCRIPT_URL'){
     const w=document.getElementById('cfgWarning');
