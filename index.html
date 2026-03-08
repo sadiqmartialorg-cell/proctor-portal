@@ -225,7 +225,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
 <!-- LOADING OVERLAY -->
 <div id="loadingOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:16px;">
   <div style="width:48px;height:48px;border:4px solid rgba(79,142,247,.3);border-top-color:#4f8ef7;border-radius:50%;animation:spin .8s linear infinite;"></div>
-  <div style="color:#e8eaf0;font-size:14px;font-weight:600;" id="loadingMsg">Syncing with Google Sheets...</div>
+  <div style="color:#e8eaf0;font-size:14px;font-weight:600;" id="loadingMsg">Syncing with Supabase...</div>
 </div>
 
 <!-- Slim top save indicator — non-blocking, replaces overlay for single ops -->
@@ -620,74 +620,52 @@ const USERS={
 let CU=null,proctors=[],logs=[],CA={},bulkVal=[],lastLoadTime=0,selectedIds=new Set();
 
 // ══════════════════════════════════════════════════
-// GOOGLE SHEETS CONFIG — fill in your values here
+// SUPABASE CONFIG — paste your values here
+// Dashboard → Settings → API
 // ══════════════════════════════════════════════════
-const GS_CONFIG = {
-  // ↓ Paste your Apps Script Web App URL here after deploying
-  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbw4MTZZoxNycKgg4MoZki2cTBBJ2N7WtkOm82BJ3gksXj95dy6aa2T4aiLqqaNYG1uY/exec',
-  // Sheet ID kept for reference (used by Apps Script, not the portal directly)
-  SHEET_ID:        '1o-QtcOkTq5f5kxcpiCttcvkOhDeH2n32eLX6uAMLpdM',
+const SB_CONFIG = {
+  URL: 'https://vukijbppuchsmwoyrbjt.supabase.co',
+  KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1a2lqYnBwdWNoc213b3lyYmp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5MzczMDIsImV4cCI6MjA4ODUxMzMwMn0.UUoinsD96wgHhkvBlZ2-p93CFkj-4TiPFBqPjrWahSI',
 };
+const T_PROCTORS='proctors', T_AUDIT='audit_log';
 
-// Column order in Proctors sheet (A→)
-const P_COLS = ['id','pid','name','aadhaar','vendor','phone','email','address','city','state',
-  'dob','gender','ptype','bgv','nda','notes','status','stage','by','at','upd','vby','vat','aat','oat','or','on'];
-
-// Column order in AuditLog sheet (A→)
-const L_COLS = ['id','ts','user','action','target','det'];
-
-// ── Helper: row array ↔ object ────────────────────
-
-function rowToObj(cols, row) {
-  const obj = {};
-  cols.forEach((c,i) => {
-    const v = (row[i] === undefined || row[i] === null) ? '' : row[i];
-    obj[c] = String(v);
-  });
-  // Fix types
-  obj.stage = parseInt(obj.stage) || 1;
-  // Null-ify empty date/nullable fields
-  ['vat','aat','oat'].forEach(k => { if(!obj[k]) obj[k] = null; });
-  return obj;
+// ── Supabase: proctor ↔ DB row mappers ──────────────
+function proctorToRow(p){
+  return {id:p.id,pid:p.pid||'',name:p.name,aadhaar:p.aadhaar,vendor:p.vendor,phone:p.phone,
+    email:p.email||'',address:p.address||'',city:p.city||'',state:p.state||'',dob:p.dob||'',
+    gender:p.gender||'',ptype:p.ptype||'',bgv:p.bgv||'',nda:p.nda||'',notes:p.notes||'',
+    status:p.status,stage:p.stage||1,by_user:p.by||'',
+    at:p.at||new Date().toISOString(),upd:p.upd||new Date().toISOString(),
+    vby:p.vby||'',vat:p.vat||null,aat:p.aat||null,oat:p.oat||null,
+    off_reason:p.or||'',off_notes:p.on||''};
 }
-
-function objToRow(cols, obj) {
-  return cols.map(c => (obj[c] === null || obj[c] === undefined) ? '' : String(obj[c]));
+function rowToProctor(r){
+  return {id:r.id,pid:r.pid||'',name:r.name,aadhaar:r.aadhaar,vendor:r.vendor,phone:r.phone,
+    email:r.email||'',address:r.address||'',city:r.city||'',state:r.state||'',dob:r.dob||'',
+    gender:r.gender||'',ptype:r.ptype||'',bgv:r.bgv||'',nda:r.nda||'',notes:r.notes||'',
+    status:r.status||'In Progress',stage:r.stage||1,by:r.by_user||'',
+    at:r.at||'',upd:r.upd||'',vby:r.vby||'',vat:r.vat||null,aat:r.aat||null,oat:r.oat||null,
+    or:r.off_reason||'',on:r.off_notes||''};
 }
+function logToRow(e){return {id:e.id,ts:e.ts,usr:e.user,action:e.action,target:e.target,detail:e.det||''};}
+function rowToLog(r){return {id:r.id,ts:r.ts,user:r.usr,action:r.action,target:r.target,det:r.detail||''};}
 
-// ── Apps Script middleware calls ───────────────────
-// All read/write goes through your deployed Apps Script Web App
-// which handles CORS and talks to the Sheet server-side.
-
-async function gasCall(action, payload={}) {
-  if(!GS_CONFIG.APPS_SCRIPT_URL || GS_CONFIG.APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL') {
-    throw new Error('Apps Script URL not configured');
-  }
-  const url = GS_CONFIG.APPS_SCRIPT_URL;
-  const body = JSON.stringify({action, ...payload});
-  // Use no-cors mode with text/plain to avoid preflight — Apps Script handles this
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 30000); // 30s timeout
-  try {
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: {'Content-Type': 'text/plain'},
-      body,
-      signal: controller.signal
-    });
-    clearTimeout(timer);
-    if(!r.ok) throw new Error('Apps Script call failed: ' + r.status);
-    const text = await r.text();
-    let d;
-    try { d = JSON.parse(text); }
-    catch(pe) { throw new Error('Invalid JSON response from Apps Script: ' + text.slice(0,100)); }
-    if(d.error) throw new Error('Apps Script error: ' + d.error);
-    return d;
-  } catch(e) {
-    clearTimeout(timer);
-    if(e.name === 'AbortError') throw new Error('Request timed out — Google Sheets is slow, try again');
-    throw e;
-  }
+// ── Supabase REST helper ──────────────────────────
+async function sbFetch(method,table,opts={}){
+  const {filter,body,select,limit,order,upsert}=opts;
+  let url=SB_CONFIG.URL+'/rest/v1/'+table;
+  const params=[];
+  if(select) params.push('select='+select);
+  if(order)  params.push('order='+order);
+  if(limit)  params.push('limit='+limit);
+  if(filter) Object.entries(filter).forEach(([k,v])=>params.push(k+'='+encodeURIComponent(v)));
+  if(params.length)url+='?'+params.join('&');
+  const headers={'Content-Type':'application/json','apikey':SB_CONFIG.KEY,'Authorization':'Bearer '+SB_CONFIG.KEY};
+  if(upsert) headers['Prefer']='resolution=merge-duplicates,return=minimal';
+  else if(method==='POST') headers['Prefer']='return=minimal';
+  const res=await fetch(url,{method,headers,body:body?JSON.stringify(body):undefined});
+  if(!res.ok){const e=await res.text();throw new Error('Supabase ('+res.status+'): '+e.slice(0,300));}
+  return method==='GET'?res.json():{success:true};
 }
 
 // ── High-level data functions ──────────────────────
@@ -695,13 +673,9 @@ async function gasCall(action, payload={}) {
 async function loadData() {
   showLoading(true);
   try {
-    // Load proctors + credentials only (logs loaded on demand)
-    const d = await gasCall('loadProctors');
-    proctors = (d.proctors||[]).map(r => rowToObj(P_COLS, r));
-    (d.credentials||[]).forEach(r => {
-      const [un,pw,role,name,disp,vendor,locked] = r;
-      if(un) USERS[un] = {pw,role,name,disp,vendor:vendor||null,locked:locked==='true'};
-    });
+    // Load proctors from Supabase (credentials stay hardcoded in JS)
+    const rows = await sbFetch('GET', T_PROCTORS, {select:'*', order:'at.desc'});
+    proctors = rows.map(rowToProctor);
     localStorage.setItem('pp_proctors_cache', JSON.stringify(proctors));
     lastLoadTime = Date.now();
     const ls=document.getElementById('lastSync');
@@ -714,7 +688,7 @@ async function loadData() {
       const p=localStorage.getItem('pp_proctors_cache');
       if(p) proctors=JSON.parse(p);
       if(proctors.length) toast('Loaded from local cache — changes will sync when back online','warning');
-      else toast('Cannot connect to Google Sheets. Check your Apps Script URL.','error');
+      else toast('Cannot connect to Google Sheets. Check your Supabase URL.','error');
     } catch(le){ toast('Connection failed and no local cache found.','error'); }
   }
   showLoading(false);
@@ -725,20 +699,21 @@ async function saveProctor(p, isNew=true) {
   localStorage.setItem('pp_proctors_cache', JSON.stringify(proctors));
   try {
     if(isNew) {
-      // Server-side duplicate check before writing — bulletproof even with concurrent users
-      const dupCheck = await gasCall('checkAndAppendProctor', {row: objToRow(P_COLS, p), id: p.id});
-      if(dupCheck.duplicate) {
+      try {
+        await sbFetch('POST', T_PROCTORS, {body: proctorToRow(p)});
+      } catch(e) {
         proctors = proctors.filter(x => x.id !== p.id);
         localStorage.setItem('pp_proctors_cache', JSON.stringify(proctors));
-        if(dupCheck.offboarded){
-          toast('Duplicate — '+dupCheck.field+' belongs to an Offboarded proctor ('+dupCheck.existing+'). Find them in the Offboarded tab to re-onboard.','warning');
-        } else {
-          toast('Duplicate — '+dupCheck.field+' already exists: '+dupCheck.existing,'error');
-        }
+        // Postgres unique violation = duplicate
+        if(e.message.includes('23505')||e.message.includes('unique')||e.message.includes('uniq')) {
+          const field = e.message.includes('aadhaar')?'Aadhaar':
+                        e.message.includes('phone')?'Phone':'Email';
+          toast('Duplicate — '+field+' already exists in the database','error');
+        } else { toast('Save failed: '+e.message,'error'); }
         badges(); return;
       }
     } else {
-      await gasCall('updateProctor', {row: objToRow(P_COLS, p), id: p.id});
+      await sbFetch('PATCH', T_PROCTORS+'?id=eq.'+p.id, {body: proctorToRow(p)});
     }
     lastLoadTime = 0; // Invalidate cache
   } catch(e) {
@@ -750,7 +725,7 @@ async function saveProctor(p, isNew=true) {
 async function saveLog(entry) {
   // Fire and forget — don't block UI waiting for log to save
   localStorage.setItem('pp_logs_cache', JSON.stringify(logs));
-  gasCall('appendLog', {row: objToRow(L_COLS, entry)}).catch(e => {
+  sbFetch('POST', T_AUDIT, {body: logToRow(entry)}).catch(e => {
     console.warn('Log save failed (non-critical):', e.message);
   });
 }
@@ -846,7 +821,7 @@ function clearInactivityTimer(){if(_inactTimer){clearTimeout(_inactTimer);_inact
 
 // ── Restore session on page load ──────────────────────────────
 window.addEventListener('DOMContentLoaded',async()=>{
-  if(GS_CONFIG.APPS_SCRIPT_URL==='YOUR_APPS_SCRIPT_URL'){
+  if(SB_CONFIG.APPS_SCRIPT_URL==='YOUR_APPS_SCRIPT_URL'){
     const w=document.getElementById('cfgWarning');if(w)w.style.display='block';
   }
   const saved=localStorage.getItem('pp_session');
@@ -1129,8 +1104,8 @@ function renderOff(){
 async function loadLogsIfNeeded() {
   if(logs.length > 0) return; // already loaded
   try {
-    const d = await gasCall('loadLogs');
-    logs = (d.logs||[]).map(r => rowToObj(L_COLS, r));
+    const rows = await sbFetch('GET', T_AUDIT, {select:'*', order:'ts.desc', limit:'2000'});
+    logs = rows.map(rowToLog);
     localStorage.setItem('pp_logs_cache', JSON.stringify(logs));
   } catch(e) {
     const l = localStorage.getItem('pp_logs_cache');
@@ -1201,7 +1176,7 @@ function renderCreds(){
     <div class="al al-i">
       <strong>📊 Google Sheets Backend</strong><br><br>
       This portal saves all data to Google Sheets in real time. To configure:<br><br>
-      1. Open the HTML file and find <code>GS_CONFIG</code> near the top of the script<br>
+      1. Open the HTML file and find <code>SB_CONFIG</code> near the top of the script<br>
       2. Fill in your <strong>API_KEY</strong> and <strong>SHEET_ID</strong><br>
       3. Create sheets named <strong>Proctors</strong>, <strong>AuditLog</strong>, and <strong>Credentials</strong> with the correct column headers<br><br>
       <strong>Vendor credentials</strong> can be managed directly in the <strong>Credentials</strong> sheet — no code changes needed to update passwords or add new vendors.<br><br>
@@ -1776,9 +1751,11 @@ async function confirmBulk(){
   showBulkProgress('Uploading '+ok.length+' proctors to Google Sheets...',ok.length);
   updateBulkProgress(0,ok.length,'Sending to server...');
   try {
-    const rows = newProctors.map(p => objToRow(P_COLS, p));
-    updateBulkProgress(Math.round(ok.length*0.3),ok.length,'Writing to sheet...');
-    const result = await gasCall('batchAppendProctors', {rows});
+    const rows = newProctors.map(p => proctorToRow(p));
+    updateBulkProgress(Math.round(ok.length*0.3),ok.length,'Writing to Supabase...');
+    // Insert batch — Supabase handles uniqueness via DB constraints
+    await sbFetch('POST', T_PROCTORS, {body: rows, upsert: false});
+    const result = {skipped:0, skippedRows:[]};
     updateBulkProgress(ok.length,ok.length,'Finalising...');
 
     // Server may have skipped additional duplicates it found
@@ -2044,7 +2021,7 @@ async function reOnboardProctor(existingId,newData){
   // ── Step 1: Archive the old row ──────────────────────────────
   old.status='Archived';
   old.upd=new Date().toISOString();
-  await gasCall('updateProctor',{row:objToRow(P_COLS,old),id:old.id});
+  await sbFetch('PATCH', T_PROCTORS+'?id=eq.'+old.id, {body: proctorToRow(old)});
 
   // ── Step 2: Create a fresh new row ───────────────────────────
   const newP={
@@ -2064,7 +2041,7 @@ async function reOnboardProctor(existingId,newData){
     vby:'',vat:null,aat:null,oat:null,or:'',on:''
   };
   proctors.push(newP);
-  await gasCall('checkAndAppendProctor',{row:objToRow(P_COLS,newP),id:newP.id});
+  await sbFetch('POST', T_PROCTORS, {body: proctorToRow(newP)});
   localStorage.setItem('pp_proctors_cache',JSON.stringify(proctors));
 
   const vendorNote=newVendor!==oldVendor?' | Vendor changed: '+oldVendor+' → '+newVendor:'';
@@ -2248,8 +2225,8 @@ async function silentRefresh(force=false) {
     return;
   }
   try {
-    const d = await gasCall('loadProctors');
-    proctors = (d.proctors||[]).map(r => rowToObj(P_COLS, r));
+    const _rows = await sbFetch('GET', T_PROCTORS, {select:'*', order:'at.desc'});
+    proctors = _rows.map(rowToProctor);
     localStorage.setItem('pp_proctors_cache', JSON.stringify(proctors));
     lastLoadTime = Date.now();
     // Re-render whichever page is currently active
@@ -2299,7 +2276,7 @@ document.querySelectorAll('.mo').forEach(o=>o.addEventListener('click',e=>{if(e.
 
 // cfgWarning + session restore both handled in the DOMContentLoaded above
 window.addEventListener('DOMContentLoaded',()=>{
-  if(GS_CONFIG.APPS_SCRIPT_URL==='YOUR_APPS_SCRIPT_URL'){
+  if(SB_CONFIG.APPS_SCRIPT_URL==='YOUR_APPS_SCRIPT_URL'){
     const w=document.getElementById('cfgWarning');
     if(w)w.style.display='block';
   }
