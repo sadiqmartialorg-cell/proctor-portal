@@ -158,6 +158,30 @@ tr:hover td{background:rgba(255,255,255,.02);}
 .t-e{border-left:3px solid var(--danger);}
 .t-i{border-left:3px solid var(--accent);}
 .t-w{border-left:3px solid var(--warning);}
+.t-saving{border-left:3px solid var(--accent);opacity:.92;}
+.b-ar{background:rgba(100,116,139,.15);color:#94a3b8;border-color:rgba(100,116,139,.3);}
+.b-ar .bdot{background:#94a3b8;}
+/* Re-onboard History Timeline */
+.hist-person{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:20px;}
+.hist-person-hdr{display:flex;align-items:center;gap:12px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+.hist-person-name{font-size:15px;font-weight:700;color:var(--text1);}
+.hist-person-aad{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);margin-top:2px;}
+.hist-chain{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;row-gap:12px;}
+.hist-node{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;min-width:160px;max-width:200px;flex-shrink:0;position:relative;}
+.hist-node.hn-active{border-color:var(--success);background:rgba(74,222,128,.06);}
+.hist-node.hn-inprog{border-color:var(--warning);background:rgba(251,191,36,.06);}
+.hist-node.hn-verified{border-color:var(--accent);background:rgba(79,142,247,.06);}
+.hist-node.hn-archived{border-color:var(--border2);opacity:.75;}
+.hist-node.hn-offboarded{border-color:var(--danger);background:rgba(248,113,113,.06);}
+.hist-arrow{display:flex;align-items:center;padding:0 6px;color:var(--text3);font-size:18px;align-self:center;flex-shrink:0;}
+.hist-cycle{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:8px;}
+.hist-pid{font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--text1);margin-bottom:4px;}
+.hist-vendor{margin-bottom:8px;}
+.hist-date{font-size:11px;color:var(--text3);line-height:1.6;}
+.hist-date span{display:block;}
+.hist-date .dt-on{color:var(--success);}
+.hist-date .dt-off{color:var(--danger);}
+.hist-date .dt-cur{color:var(--accent);}
 @keyframes si{from{transform:translateX(100%);opacity:0;}to{transform:translateX(0);opacity:1;}}
 .upzone{border:2px dashed var(--border2);border-radius:var(--radius);padding:32px;text-align:center;cursor:pointer;transition:all .2s;}
 .upzone:hover{border-color:var(--accent);background:rgba(79,142,247,.05);}
@@ -204,6 +228,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
   <div style="color:#e8eaf0;font-size:14px;font-weight:600;" id="loadingMsg">Syncing with Google Sheets...</div>
 </div>
 
+<!-- Slim top save indicator — non-blocking, replaces overlay for single ops -->
 <!-- Floating bulk progress panel — non-blocking -->
 <div id="bulkProgressPanel" style="display:none;position:fixed;bottom:24px;right:24px;z-index:8000;
   background:#1a1f2e;border:1px solid #2a3047;border-radius:12px;padding:16px 20px;
@@ -367,12 +392,31 @@ tr:hover td{background:rgba(255,255,255,.02);}
               </div>
               <div class="sec-t">Additional Notes</div>
               <div class="form-group" style="margin-bottom:24px;"><label>Notes <span class="opt">(Optional)</span></label><textarea id="f_notes" rows="3" placeholder="Any relevant notes about this proctor..."></textarea></div>
+              <div id="formErrBanner" style="display:none;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.35);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--danger);font-weight:600;">
+                ⚠️ <span id="formErrText">Please fill in all required fields before submitting.</span>
+              </div>
               <div style="display:flex;gap:10px;flex-wrap:wrap;">
                 <button class="btn btn-primary" onclick="submitProctor()">✅ Submit for Onboarding</button>
                 <button class="btn btn-ghost" onclick="clearForm()">Clear</button>
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- RE-ONBOARD HISTORY (admin only) -->
+        <div class="page" id="page-history">
+          <div class="page-header">
+            <div><h2>Re-onboard History</h2><p>Journey timeline for proctors who have been offboarded and re-onboarded</p></div>
+            <button class="btn btn-ghost btn-sm" onclick="exportTabCSV('history')">⬇ Export</button>
+          </div>
+          <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+            <input id="sHist" placeholder="Search name, Aadhaar, vendor..." style="flex:1;min-width:160px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius2);padding:8px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;" oninput="renderHistory()">
+            <select id="fHistV" onchange="renderHistory()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius2);padding:8px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;">
+              <option value="">All Vendors</option>
+              <option>Sai</option><option>TSN</option><option>Avner</option><option>A&M</option><option>Atura</option><option>Awign</option>
+            </select>
+          </div>
+          <div id="histTimeline"></div>
         </div>
 
         <!-- MY PROCTORS (vendor uploader / talview view) -->
@@ -530,6 +574,28 @@ tr:hover td{background:rgba(255,255,255,.02);}
   <div class="mf"><button class="btn btn-ghost" onclick="cm('mEdt')">Cancel</button><button class="btn btn-primary" onclick="saveEdit()">💾 Save Changes</button></div>
 </div></div>
 
+<!-- Re-onboard modal -->
+<div class="mo" id="mROB"><div class="modal msm">
+  <div class="mh"><h3>Re-onboard Proctor</h3><button class="mcl" onclick="cm('mROB')">×</button></div>
+  <div class="mb">
+    <p id="robNm" style="font-weight:700;font-size:15px;margin-bottom:4px;color:var(--text1);"></p>
+    <p id="robMeta" style="font-size:12px;color:var(--text3);margin-bottom:12px;white-space:pre-line;line-height:1.6;"></p>
+    <div class="al al-i" style="margin-bottom:16px;">Re-onboarding will reset this proctor to <strong>In Progress</strong> with a blank PID. Their documents and personal details are preserved.</div>
+    <div class="form-group">
+      <label>Re-onboard Under Vendor <span class="req">*</span></label>
+      <select id="robVendor">
+        <option>Sai</option><option>TSN</option><option>Avner</option>
+        <option>A&M</option><option>Atura</option><option>Awign</option>
+      </select>
+      <div id="robVendorNote" style="font-size:11px;color:var(--text3);margin-top:4px;">Change vendor if this proctor is switching companies</div>
+    </div>
+  </div>
+  <div class="mf">
+    <button class="btn btn-ghost" onclick="cm('mROB')">Cancel</button>
+    <button class="btn btn-primary" onclick="confirmReOnboard()">↩ Confirm Re-onboard</button>
+  </div>
+</div></div>
+
 <div id="toasts"></div>
 
 <script>
@@ -558,7 +624,7 @@ let CU=null,proctors=[],logs=[],CA={},bulkVal=[],lastLoadTime=0,selectedIds=new 
 // ══════════════════════════════════════════════════
 const GS_CONFIG = {
   // ↓ Paste your Apps Script Web App URL here after deploying
-  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbw3KFdKDyABrRww0UDhEesIdYWX9XuIqmk_EcdKDVb2zL8U28GkZVfNwu_6opz2-sE/exec',
+  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbw4MTZZoxNycKgg4MoZki2cTBBJ2N7WtkOm82BJ3gksXj95dy6aa2T4aiLqqaNYG1uY/exec',
   // Sheet ID kept for reference (used by Apps Script, not the portal directly)
   SHEET_ID:        '1o-QtcOkTq5f5kxcpiCttcvkOhDeH2n32eLX6uAMLpdM',
 };
@@ -665,9 +731,7 @@ async function saveProctor(p, isNew=true) {
         proctors = proctors.filter(x => x.id !== p.id);
         localStorage.setItem('pp_proctors_cache', JSON.stringify(proctors));
         if(dupCheck.offboarded){
-          if(confirm('This proctor is Offboarded.\nRe-onboard '+dupCheck.existing+'?\nTheir record will be reset to In Progress.')){
-            await reOnboardProctor(dupCheck.existingId, p);
-          }
+          toast('Duplicate — '+dupCheck.field+' belongs to an Offboarded proctor ('+dupCheck.existing+'). Find them in the Offboarded tab to re-onboard.','warning');
         } else {
           toast('Duplicate — '+dupCheck.field+' already exists: '+dupCheck.existing,'error');
         }
@@ -692,9 +756,25 @@ async function saveLog(entry) {
 }
 
 function showLoading(on) {
+  // Keep full overlay ONLY for initial data load / manual refresh
   let el = document.getElementById('loadingOverlay');
   if(!el) return;
   el.style.display = on ? 'flex' : 'none';
+}
+
+// Slim top bar for single-record saves — non-blocking
+let _saveToastEl=null;
+function showSaving(msg){
+  // Remove any existing save toast first
+  if(_saveToastEl){_saveToastEl.remove();_saveToastEl=null;}
+  const el=document.createElement('div');
+  el.className='toast t-saving';
+  el.innerHTML=`<span style="width:13px;height:13px;border:2px solid rgba(79,142,247,.25);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;flex-shrink:0;"></span><span>${msg||'Saving...'}</span>`;
+  document.getElementById('toasts').appendChild(el);
+  _saveToastEl=el;
+}
+function hideSaving(){
+  if(_saveToastEl){_saveToastEl.remove();_saveToastEl=null;}
 }
 
 function clearData(){
@@ -799,6 +879,7 @@ function buildNav(){
       <div class="nav-item" onclick="nav('onboarding')"><span class="icon">⏳</span>In Progress<span class="nav-badge" id="nb-ip" style="background:var(--warning)">0</span></div>
       <div class="nav-item" onclick="nav('active')"><span class="icon">✅</span>Active<span class="nav-badge" id="nb-act" style="background:var(--success);color:#000">0</span></div>
       <div class="nav-item" onclick="nav('offboarded')"><span class="icon">🚪</span>Offboarded</div>
+      <div class="nav-item" onclick="nav('history')" id="nav-history"><span class="icon">🗂️</span>Re-onboard History</div>
       <div class="nst" style="margin-top:8px">Upload</div>
       <div class="nav-item" onclick="nav('addProctor')"><span class="icon">➕</span>Add Proctor</div>
       <div class="nav-item" onclick="nav('bulkUpload')"><span class="icon">📤</span>Bulk Upload</div>
@@ -844,13 +925,14 @@ function nav(pg){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   const pe=document.getElementById('page-'+pg);if(pe)pe.classList.add('active');
   const ni=document.querySelector(`.nav-item[onclick*="'${pg}'"]`);if(ni)ni.classList.add('active');
-  const titles={dashboard:'Dashboard',proctors:'All Proctors',onboarding:'In Progress',active:'Active Proctors',offboarded:'Offboarded',addProctor:'Add New Proctor',bulkUpload:'Bulk Upload',incomplete:'Incomplete Details',bulkBGV:'Bulk BGV Update',audit:'Audit Log',credentials:'System Credentials',myProctors:'All Proctors'};
+  const titles={dashboard:'Dashboard',proctors:'All Proctors',onboarding:'In Progress',active:'Active Proctors',offboarded:'Offboarded',history:'Re-onboard History',addProctor:'Add New Proctor',bulkUpload:'Bulk Upload',incomplete:'Incomplete Details',bulkBGV:'Bulk BGV Update',audit:'Audit Log',credentials:'System Credentials',myProctors:'All Proctors'};
   document.getElementById('tTl').textContent=titles[pg]||pg;
   if(pg==='dashboard')renderDash();
   if(pg==='proctors')renderPro();
   if(pg==='onboarding')renderOnboard();
   if(pg==='active')renderActive();
   if(pg==='offboarded')renderOff();
+  if(pg==='history')renderHistory();
   if(pg==='audit'){loadLogsIfNeeded().then(renderAudit);}
   if(pg==='incomplete')renderInc();
   if(pg==='bulkBGV')renderBulkBGV();
@@ -864,10 +946,11 @@ function nav(pg){
 // DASHBOARD
 // ══════════════════════════════════════════════════
 function renderDash(){
-  const tot=proctors.length,ip=proctors.filter(p=>p.status==='In Progress').length,
-    ver=proctors.filter(p=>p.status==='Verified').length,
-    act=proctors.filter(p=>p.status==='Active').length,
-    off=proctors.filter(p=>p.status==='Offboarded').length;
+  const active_p=proctors.filter(p=>p.status!=='Archived');
+  const tot=active_p.length,ip=active_p.filter(p=>p.status==='In Progress').length,
+    ver=active_p.filter(p=>p.status==='Verified').length,
+    act=active_p.filter(p=>p.status==='Active').length,
+    off=active_p.filter(p=>p.status==='Offboarded').length;
   document.getElementById('dStats').innerHTML=`
     <div class="stat-card s-a"><div class="stat-label">Total</div><div class="stat-value">${tot}</div></div>
     <div class="stat-card s-w"><div class="stat-label">In Progress</div><div class="stat-value">${ip}</div><div class="stat-sub">Pending</div></div>
@@ -875,7 +958,7 @@ function renderDash(){
     <div class="stat-card s-s"><div class="stat-label">Active</div><div class="stat-value">${act}</div></div>
     <div class="stat-card s-d"><div class="stat-label">Offboarded</div><div class="stat-value">${off}</div></div>`;
   document.getElementById('vGrid').innerHTML=VENDORS.map(v=>{
-    const t=proctors.filter(p=>p.vendor===v).length,a=proctors.filter(p=>p.vendor===v&&p.status==='Active').length;
+    const t=proctors.filter(p=>p.vendor===v&&p.status!=='Archived').length,a=proctors.filter(p=>p.vendor===v&&p.status==='Active').length;
     return `<div class="vendor-card"><div class="vendor-name">${v}</div><div class="vendor-count">${t}</div><div class="vendor-sub">${a} active</div></div>`;
   }).join('');
   const rec=[...proctors].sort((a,b)=>new Date(b.upd)-new Date(a.upd)).slice(0,8);
@@ -892,7 +975,7 @@ function renderPro(){
   const st=document.getElementById('fSt')?.value||'';
   let f=proctors.filter(p=>{
     const ms=!s||p.name.toLowerCase().includes(s)||(p.pid||'').toLowerCase().includes(s)||(p.aadhaar||'').includes(s);
-    return ms&&(!v||p.vendor===v)&&(!st||p.status===st);
+    return ms&&p.status!=='Archived'&&(!v||p.vendor===v)&&(!st||p.status===st);
   });
   document.getElementById('pCnt').textContent=f.length+' records';
   document.getElementById('pBody').innerHTML=f.map(p=>`<tr>
@@ -911,7 +994,7 @@ function renderPro(){
 function renderOnboard(){
   const sq=(document.getElementById('sOnb')||{value:''}).value.toLowerCase();
   const sv=(document.getElementById('fOnbV')||{value:''}).value;
-  const list=proctors.filter(p=>(p.status==='In Progress'||p.status==='Verified')&&
+  const list=proctors.filter(p=>p.status!=='Archived'&&(p.status==='In Progress'||p.status==='Verified')&&
     (!sq||(p.name||'').toLowerCase().includes(sq)||(p.pid||'').toLowerCase().includes(sq)||(p.phone||'').includes(sq))&&
     (!sv||p.vendor===sv));
   document.getElementById('oBody').innerHTML=list.map(p=>`<tr>
@@ -947,17 +1030,100 @@ function renderActive(){
     </div></td></tr>`).join('')||er(6,'No active proctors');
 }
 
+function renderHistory(){
+  if(CU.role!=='admin')return;
+  const sq=(document.getElementById('sHist')||{value:''}).value.toLowerCase();
+  const sv=(document.getElementById('fHistV')||{value:''}).value;
+
+  // Collect all Aadhaar numbers that have at least one Archived row
+  const archivedAadhaar=new Set(proctors.filter(p=>p.status==='Archived').map(p=>p.aadhaar));
+
+  // Group ALL rows (archived + active) by aadhaar, only for people with history
+  const groups={};
+  proctors.filter(p=>archivedAadhaar.has(p.aadhaar)).forEach(p=>{
+    if(!groups[p.aadhaar])groups[p.aadhaar]=[];
+    groups[p.aadhaar].push(p);
+  });
+
+  // Sort each group chronologically by onboard date (at)
+  Object.values(groups).forEach(g=>g.sort((a,b)=>new Date(a.at)-new Date(b.at)));
+
+  // Filter groups by search/vendor
+  const personKeys=Object.keys(groups).filter(aad=>{
+    const g=groups[aad];
+    const name=(g[0].name||'').toLowerCase();
+    const vendorMatch=!sv||g.some(p=>p.vendor===sv);
+    const searchMatch=!sq||name.includes(sq)||aad.includes(sq)||
+      g.some(p=>(p.pid||'').toLowerCase().includes(sq)||(p.vendor||'').toLowerCase().includes(sq));
+    return vendorMatch&&searchMatch;
+  });
+
+  const el=document.getElementById('histTimeline');
+  if(!personKeys.length){
+    el.innerHTML=`<div class="empty"><div class="ei">🗂️</div><h3>No re-onboard history</h3><p>Proctors who have been offboarded and re-onboarded will appear here.</p></div>`;
+    return;
+  }
+
+  // Status → node CSS class
+  const nodeClass={Active:'hn-active','In Progress':'hn-inprog',Verified:'hn-verified',Archived:'hn-archived',Offboarded:'hn-offboarded'};
+
+  el.innerHTML=personKeys.map(aad=>{
+    const g=groups[aad];
+    const person=g[0];
+
+    const nodes=g.map((p,i)=>{
+      const cls=nodeClass[p.status]||'';
+      const cycleLabel='Cycle '+(i+1);
+      const pidLabel=p.pid||'No PID';
+      const onDate=`<span class="dt-on">▲ Onboarded: ${fd2(p.at)}</span>`;
+      let offDate='';
+      if(p.status==='Archived'||p.status==='Offboarded'){
+        offDate=`<span class="dt-off">▼ Offboarded: ${fd2(p.oat)||'—'}${p.or?' ('+p.or+')':''}</span>`;
+      } else {
+        offDate=`<span class="dt-cur">${sb(p.status)}</span>`;
+      }
+      return `<div class="hist-node ${cls}">
+        <div class="hist-cycle">${cycleLabel}</div>
+        <div class="hist-pid">${pidLabel}</div>
+        <div class="hist-vendor"><span class="vb ${VCL[p.vendor]||''}">${p.vendor}</span></div>
+        <div class="hist-date">${onDate}${offDate}</div>
+      </div>`;
+    });
+
+    // Interleave arrows between nodes
+    const chain=nodes.map((n,i)=>i<nodes.length-1?n+'<div class="hist-arrow">→</div>':n).join('');
+
+    return `<div class="hist-person">
+      <div class="hist-person-hdr">
+        <div>
+          <div class="hist-person-name">${person.name}</div>
+          <div class="hist-person-aad">Aadhaar: ${mask(person.aadhaar)} · ${g.length} onboarding cycle${g.length>1?'s':''}</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="viewP('${g[g.length-1].id}')">👁 View Current</button>
+      </div>
+      <div class="hist-chain">${chain}</div>
+    </div>`;
+  }).join('');
+}
+
 function renderOff(){
   const sq=(document.getElementById('sOff')||{value:''}).value.toLowerCase();
   const sv=(document.getElementById('fOffV')||{value:''}).value;
   const list=proctors.filter(p=>p.status==='Offboarded'&&
     (!sq||(p.name||'').toLowerCase().includes(sq)||(p.pid||'').toLowerCase().includes(sq)||(p.phone||'').includes(sq))&&
     (!sv||p.vendor===sv));
-  document.getElementById('offBody').innerHTML=list.map(p=>`<tr>
+  const isAdmin=CU.role==='admin';
+  document.getElementById('offBody').innerHTML=list.map(p=>{
+    const rob=isAdmin?("<button class=\"btn btn-primary btn-sm\" data-id=\""+p.id+"\" onclick=\"triggerReOnboard(this.dataset.id)\">↩ Re-onboard</button>"):"";
+    return `<tr>
     <td class="tdi">${p.pid}</td><td class="tdn">${p.name}</td>
     <td><span class="vb ${VCL[p.vendor]}">${p.vendor}</span></td>
     <td style="color:var(--text3);font-size:12px">${fd2(p.oat)}</td><td>${p.or}</td>
-    <td><button class="btn btn-ghost btn-sm" onclick="viewP('${p.id}')">👁 View</button></td></tr>`).join('')||er(6,'No offboarded proctors');
+    <td><div class="ag">
+      <button class="btn btn-ghost btn-sm" onclick="viewP('${p.id}')">👁 View</button>
+      ${rob}
+    </div></td></tr>`;
+  }).join('')||er(6,'No offboarded proctors');
 }
 
 async function loadLogsIfNeeded() {
@@ -1058,6 +1224,7 @@ function renderMyPro(){
     : proctors.filter(p=>p.vendor===CU.vendor);
 
   if(s) f=f.filter(p=>p.name.toLowerCase().includes(s)||(p.aadhaar||'').includes(s)||p.phone.includes(s));
+  f=f.filter(p=>p.status!=='Archived');
   if(st) f=f.filter(p=>p.status===st);
 
   const vendorLabel = isTalview ? 'Uploaded by you (all vendors)' : CU.vendor+' vendor proctors';
@@ -1135,10 +1302,10 @@ async function saveBGV(){
   if(!lk){toast('Please enter the SharePoint link','error');return;}
   const p=proctors.find(x=>x.id===CA.bgvId);if(!p)return;
   p.bgv=lk;p.upd=new Date().toISOString();
-  showLoading(true);
+  showSaving('Saving BGV link...');
   await saveProctor(p, false);
   addLog('BGV Added',p.name,'BGV link added by '+CU.un);
-  showLoading(false);
+  hideSaving();
   cm('mBGV');toast('BGV document added for '+p.name,'success');
   renderInc();badges();
 }
@@ -1250,10 +1417,10 @@ async function saveEdit(){
   p.phone=gv('ef_ph');p.email=gv('ef_em');p.address=gv('ef_ad');p.city=gv('ef_ci');p.state=gv('ef_st');
   p.ptype=gv('ef_pt')||p.ptype||'';
   p.bgv=gv('ef_bg');p.nda=gv('ef_nd');p.notes=gv('ef_no');p.upd=new Date().toISOString();
-  showLoading(true);
+  showSaving('Saving changes...');
   await saveProctor(p, false);
   addLog('Updated',p.name,'Record updated by '+CU.un);
-  showLoading(false);
+  hideSaving();
   cm('mEdt');toast('Changes saved','success');renderPro();
 }
 
@@ -1261,16 +1428,50 @@ async function saveEdit(){
 // ADD PROCTOR
 // ══════════════════════════════════════════════════
 function clrErr(){
-  document.querySelectorAll('.field-error').forEach(e=>e.textContent='');
+  document.querySelectorAll('.field-error').forEach(e=>{e.textContent='';e.innerHTML='';});
   document.querySelectorAll('.ef').forEach(e=>e.classList.remove('ef'));
 }
 function setE(fi,ei,msg){
   const f=document.getElementById(fi),e=document.getElementById(ei);
   if(f)f.classList.add('ef');if(e)e.textContent=msg;
 }
+function setEHtml(fi,ei,html){
+  const f=document.getElementById(fi),e=document.getElementById(ei);
+  if(f)f.classList.add('ef');if(e)e.innerHTML=html;
+}
+function scrollToFirstErr(){
+  const first=document.querySelector('#page-addProctor .ef, #page-addProctor .field-error:not(:empty)');
+  if(first)first.scrollIntoView({behavior:'smooth',block:'center'});
+}
+function triggerReOnboard(existingId){
+  const p=proctors.find(x=>x.id===existingId);
+  if(!p){toast('Proctor not found','error');return;}
+  if(CU.role!=='admin'){
+    // Non-admin: inform only — admin must action this
+    toast(p.name+' ('+p.vendor+') was previously offboarded. Please contact Talview Admin to re-onboard this proctor.','warning');
+    return;
+  }
+  // Admin: open re-onboard modal
+  CA.robId=existingId;
+  document.getElementById('robNm').textContent=p.name;
+  document.getElementById('robMeta').textContent=
+    'Originally onboarded under: '+p.vendor+
+    ' · Offboarded: '+fd2(p.oat)+
+    (p.or?' · Reason: '+p.or:'');
+  document.getElementById('robVendorNote').textContent=
+    'Previously under '+p.vendor+' — change below if re-onboarding under a different company.';
+  // Pre-select original vendor in dropdown
+  const sel=document.getElementById('robVendor');
+  if(sel){for(let i=0;i<sel.options.length;i++){if(sel.options[i].value===p.vendor){sel.selectedIndex=i;break;}}}
+  om('mROB');
+}
 
 async function submitProctor(){
-  clrErr();let ok=true;
+  clrErr();
+  // Hide any previous error banner
+  const banner=document.getElementById('formErrBanner');
+  if(banner)banner.style.display='none';
+  let ok=true;
   const v=id=>(document.getElementById(id)?.value?.trim()||'');
   const name=v('f_name'),aadhaar=String(v('f_aadhaar')).replace(/\.0+$/,'').trim(),dob=v('f_dob'),gender=v('f_gender'),ptype=v('f_ptype'),
     vendor=CU.locked?CU.vendor:v('f_vendor'),
@@ -1292,38 +1493,76 @@ async function submitProctor(){
   if(!city)         {setE('f_city','e_city','City is required');ok=false;}
   if(!state)        {setE('f_state','e_state','State is required');ok=false;}
   if(!nda)          {setE('f_nda','e_nda','NDA document link is required');ok=false;}
-  if(!ok)return;
 
-  // Refresh from Sheets if data is stale (>30s) before checking duplicates
-  if((Date.now() - lastLoadTime) > 30000) {
-    showLoading(true);
-    await silentRefresh(true);
-    showLoading(false);
+  if(!ok){
+    // Count errors and show banner
+    const errCount=document.querySelectorAll('.field-error:not(:empty)').length;
+    if(banner){
+      document.getElementById('formErrText').textContent=errCount+' required field'+(errCount>1?'s are':' is')+' missing or invalid. Please fix before submitting.';
+      banner.style.display='block';
+    }
+    // Scroll to first error field
+    const firstErr=document.querySelector('#page-addProctor .ef, #page-addProctor .field-error:not(:empty)');
+    if(firstErr)firstErr.scrollIntoView({behavior:'smooth',block:'center'});
+    return;
   }
 
-  const da=proctors.find(p=>p.aadhaar===aadhaar);
-  if(da){setE('f_aadhaar','e_aadhaar','⚠️ Duplicate — already exists: '+da.name+' ('+da.vendor+')');return;}
-  const dp=proctors.find(p=>p.phone===phone);
-  if(dp){setE('f_phone','e_phone','⚠️ Duplicate — already exists: '+dp.name+' ('+dp.vendor+')');return;}
-  const de=proctors.find(p=>p.email.toLowerCase()===email.toLowerCase());
-  if(de){setE('f_email','e_email','⚠️ Duplicate — already exists: '+de.name+' ('+de.vendor+')');return;}
-
+  // Client-side duplicate check against cached data (fast — no network)
+  const da=proctors.find(p=>p.aadhaar===aadhaar&&p.status!=='Archived');
+  if(da){
+    if(da.status==='Offboarded'){
+      if(CU.role==='admin'){
+        setEHtml('f_aadhaar','e_aadhaar',`⚠️ ${da.name} was offboarded (${da.vendor}). <a href="#" onclick="event.preventDefault();nav('offboarded')" style="color:var(--accent);text-decoration:underline;">Go to Offboarded tab to re-onboard →</a>`);
+      } else {
+        setE('f_aadhaar','e_aadhaar','⚠️ '+da.name+' was previously offboarded. Please contact Talview Admin to re-onboard this proctor.');
+      }
+    } else {
+      setE('f_aadhaar','e_aadhaar','⚠️ Duplicate — already exists: '+da.name+' ('+da.vendor+')');
+    }
+    scrollToFirstErr();return;
+  }
+  const dp=proctors.find(p=>p.phone===phone&&p.status!=='Archived');
+  if(dp){
+    if(dp.status==='Offboarded'){
+      if(CU.role==='admin'){
+        setEHtml('f_phone','e_phone',`⚠️ ${dp.name} was offboarded (${dp.vendor}). <a href="#" onclick="event.preventDefault();nav('offboarded')" style="color:var(--accent);text-decoration:underline;">Go to Offboarded tab to re-onboard →</a>`);
+      } else {
+        setE('f_phone','e_phone','⚠️ '+dp.name+' was previously offboarded. Please contact Talview Admin to re-onboard this proctor.');
+      }
+    } else {
+      setE('f_phone','e_phone','⚠️ Duplicate — already exists: '+dp.name+' ('+dp.vendor+')');
+    }
+    scrollToFirstErr();return;
+  }
+  const de=proctors.find(p=>p.email.toLowerCase()===email.toLowerCase()&&p.status!=='Archived');
+  if(de){
+    if(de.status==='Offboarded'){
+      if(CU.role==='admin'){
+        setEHtml('f_email','e_email',`⚠️ ${de.name} was offboarded (${de.vendor}). <a href="#" onclick="event.preventDefault();nav('offboarded')" style="color:var(--accent);text-decoration:underline;">Go to Offboarded tab to re-onboard →</a>`);
+      } else {
+        setE('f_email','e_email','⚠️ '+de.name+' was previously offboarded. Please contact Talview Admin to re-onboard this proctor.');
+      }
+    } else {
+      setE('f_email','e_email','⚠️ Duplicate — already exists: '+de.name+' ('+de.vendor+')');
+    }
+    scrollToFirstErr();return;
+  }
   const p={id:'p'+Date.now(),pid:'',name,aadhaar,vendor,phone,email,address,city,state,dob,gender,ptype,
     bgv:v('f_bgv'),nda,notes:v('f_notes'),
     status:'In Progress',stage:1,by:CU.un,
     at:new Date().toISOString(),upd:new Date().toISOString(),
     vby:'',vat:null,aat:null,oat:null,or:'',on:''};
   proctors.push(p);
-  showLoading(true);
+  // Show saving toast immediately — before any network call
+  showSaving('Adding proctor...');
   await saveProctor(p, true);
   addLog('Created',p.name,'Vendor: '+vendor+(CU.role==='talview'?' (via Talview Uploader)':'')+(p.bgv?'':' BGV pending'));
-  showLoading(false);
+  hideSaving();
   clearForm();
   toast(name+' added successfully!'+(p.bgv?'':' Add BGV from the Incomplete tab when ready.'),'success');
   badges();
   if(!p.bgv)nav('incomplete');else nav('onboarding');
-  // Refresh from Sheets in background so all users see update
-  silentRefresh();
+  silentRefresh(); // background sync — never blocks UI
 }
 
 function clearForm(){
@@ -1332,6 +1571,7 @@ function clearForm(){
   const pt=document.getElementById('f_ptype');if(pt)pt.selectedIndex=0;
   if(!CU?.locked){const vnd=document.getElementById('f_vendor');if(vnd)vnd.selectedIndex=0;}
   clrErr();
+  const b=document.getElementById('formErrBanner');if(b)b.style.display='none';
 }
 
 // ══════════════════════════════════════════════════
@@ -1442,9 +1682,18 @@ function validateBulk(raw){
 
     // ── Duplicates against live database ──
     const ak=r.aadhaar, pk=r.phone, ek=(r.email||'').toLowerCase();
-    if(ak&&/^\d{12}$/.test(ak)){const d=proctors.find(p=>p.aadhaar===ak);if(d)errs.push('Aadhaar already in database ('+d.name+', '+d.vendor+')');}
-    if(pk&&/^\d{10}$/.test(pk)){const d=proctors.find(p=>p.phone===pk);if(d)errs.push('Phone already in database ('+d.name+', '+d.vendor+')');}
-    if(ek&&r.email.includes('@')){const d=proctors.find(p=>(p.email||'').toLowerCase()===ek);if(d)errs.push('Email already in database ('+d.name+', '+d.vendor+')');}
+    if(ak&&/^\d{12}$/.test(ak)){const d=proctors.find(p=>p.aadhaar===ak&&p.status!=='Archived');if(d){
+      if(d.status==='Offboarded') errs.push(CU.role==='admin'?'Aadhaar belongs to offboarded proctor '+d.name+' — use the Offboarded tab to re-onboard':'Aadhaar belongs to offboarded proctor '+d.name+' — contact admin to re-onboard');
+      else errs.push('Aadhaar already in database ('+d.name+', '+d.vendor+')');
+    }}
+    if(pk&&/^\d{10}$/.test(pk)){const d=proctors.find(p=>p.phone===pk&&p.status!=='Archived');if(d){
+      if(d.status==='Offboarded') errs.push(CU.role==='admin'?'Phone belongs to offboarded proctor '+d.name+' — use the Offboarded tab to re-onboard':'Phone belongs to offboarded proctor '+d.name+' — contact admin to re-onboard');
+      else errs.push('Phone already in database ('+d.name+', '+d.vendor+')');
+    }}
+    if(ek&&r.email.includes('@')){const d=proctors.find(p=>(p.email||'').toLowerCase()===ek&&p.status!=='Archived');if(d){
+      if(d.status==='Offboarded') errs.push(CU.role==='admin'?'Email belongs to offboarded proctor '+d.name+' — use the Offboarded tab to re-onboard':'Email belongs to offboarded proctor '+d.name+' — contact admin to re-onboard');
+      else errs.push('Email already in database ('+d.name+', '+d.vendor+')');
+    }}
 
     // ── Duplicates within the file ──
     if(ak){if(sA[ak])errs.push('Aadhaar repeated in this file (row '+(sA[ak]+1)+')');else sA[ak]=idx+1;}
@@ -1524,10 +1773,13 @@ async function confirmBulk(){
     vby:'',vat:null,aat:null,oat:null,or:'',on:''
   }));
 
-  showLoading(true);
+  showBulkProgress('Uploading '+ok.length+' proctors to Google Sheets...',ok.length);
+  updateBulkProgress(0,ok.length,'Sending to server...');
   try {
     const rows = newProctors.map(p => objToRow(P_COLS, p));
+    updateBulkProgress(Math.round(ok.length*0.3),ok.length,'Writing to sheet...');
     const result = await gasCall('batchAppendProctors', {rows});
+    updateBulkProgress(ok.length,ok.length,'Finalising...');
 
     // Server may have skipped additional duplicates it found
     const serverSkipped = result.skipped||0;
@@ -1553,12 +1805,12 @@ async function confirmBulk(){
 
   } catch(e) {
     console.error('Bulk upload error:', e);
+    hideBulkProgress();
     toast('Upload failed — please try again.','error');
-    showLoading(false);
     return;
   }
 
-  showLoading(false);
+  hideBulkProgress();
   bulkVal=[];
   document.getElementById('bPrev').innerHTML='';
   document.getElementById('bAct').style.display='none';
@@ -1582,10 +1834,10 @@ async function confirmVerify(){
   const p=proctors.find(x=>x.id===CA.vId);if(!p)return;
   p.status='Verified';p.stage=2;p.vby=CU.un;p.vat=new Date().toISOString();p.upd=new Date().toISOString();
   const n=document.getElementById('vNt').value;
-  showLoading(true);
+  showSaving('Verifying...');
   await saveProctor(p, false);
   addLog('Verified',p.name,'Verified by '+CU.un+(n?'. Notes: '+n:''));
-  showLoading(false);
+  hideSaving();
   cm('mVer');toast(p.name+' verified!','success');renderOnboard();badges();
 }
 
@@ -1606,10 +1858,10 @@ function openAssign(id){
 async function confirmAssign(){
   const p=proctors.find(x=>x.id===CA.aId);if(!p)return;
   p.pid=CA.gId;p.status='Active';p.stage=3;p.aat=new Date().toISOString();p.upd=new Date().toISOString();
-  showLoading(true);
+  showSaving('Assigning ID...');
   await saveProctor(p, false);
   addLog('ID Assigned',p.name,'ID: '+p.pid+' → Active');
-  showLoading(false);
+  hideSaving();
   cm('mAsg');toast('ID '+p.pid+' assigned! '+p.name+' is now Active.','success');renderOnboard();badges();
 }
 
@@ -1627,10 +1879,10 @@ async function confirmOff(){
   const p=proctors.find(x=>x.id===CA.oId);if(!p)return;
   p.status='Offboarded';p.oat=new Date().toISOString();p.or=rsn;
   p.on=document.getElementById('ofNt').value;p.upd=new Date().toISOString();
-  showLoading(true);
+  showSaving('Offboarding...');
   await saveProctor(p, false);
   addLog('Offboarded',p.name,'Reason: '+rsn);
-  showLoading(false);
+  hideSaving();
   cm('mOff');toast(p.name+' has been offboarded.','info');renderActive();badges();
 }
 
@@ -1639,7 +1891,7 @@ async function confirmOff(){
 // ══════════════════════════════════════════════════
 function exportAllCSV(){
   const h=['Proctor ID','Name','Aadhaar','Vendor','Phone','Email','City','State','Status','BGV','NDA','Created','Activated','Uploaded By'];
-  const rows=proctors.map(p=>[p.pid||'—',p.name,p.aadhaar,p.vendor,p.phone,p.email||'—',p.city,p.state,p.status,p.bgv?'Yes':'No',p.nda?'Yes':'No',fd2(p.at),p.aat?fd2(p.aat):'—',p.by]);
+  const rows=proctors.filter(p=>p.status!=='Archived').map(p=>[p.pid||'—',p.name,p.aadhaar,p.vendor,p.phone,p.email||'—',p.city,p.state,p.status,p.bgv?'Yes':'No',p.nda?'Yes':'No',fd2(p.at),p.aat?fd2(p.aat):'—',p.by]);
   const csv=[h,...rows].map(r=>r.join(',')).join('\n');
   const blob=new Blob([csv],{type:'text/csv'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
@@ -1649,7 +1901,7 @@ function exportAllCSV(){
 
 function exportCSV(){
   const h=['Proctor ID','Name','Aadhaar','Vendor','Phone','Email','City','State','Status','Created','Activated'];
-  const rows=proctors.map(p=>[p.pid,p.name,p.aadhaar,p.vendor,p.phone,p.email,p.city,p.state,p.status,fd2(p.at),p.aat?fd2(p.aat):'—']);
+  const rows=proctors.filter(p=>p.status!=='Archived').map(p=>[p.pid,p.name,p.aadhaar,p.vendor,p.phone,p.email,p.city,p.state,p.status,fd2(p.at),p.aat?fd2(p.aat):'—']);
   const csv=[h,...rows].map(r=>r.join(',')).join('\n');
   const blob=new Blob([csv],{type:'text/csv'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
@@ -1662,7 +1914,7 @@ function exportCSV(){
 // ══════════════════════════════════════════════════
 const gv=id=>document.getElementById(id)?.value?.trim()||'';
 const mask=a=>(!a||a.length<4)?a||'—':'XXXX-XXXX-'+a.slice(-4);
-const sb=s=>{const m={'In Progress':['b-ip'],'Verified':['b-ve'],'Active':['b-ac'],'Offboarded':['b-of']};const[c]=m[s]||[''];return`<span class="badge ${c}"><span class="bdot"></span>${s||'—'}</span>`;};
+const sb=s=>{const m={'In Progress':['b-ip'],'Verified':['b-ve'],'Active':['b-ac'],'Offboarded':['b-of'],'Archived':['b-ar']};const[c]=m[s]||[''];return`<span class="badge ${c}"><span class="bdot"></span>${s||'—'}</span>`;};
 const bgvBadge=v=>v
   ?'<span style="color:var(--success);font-size:12px;">✅ Uploaded</span>'
   :'<span style="color:var(--warning);font-size:12px;font-weight:600;">⚠️ Pending</span>';
@@ -1774,18 +2026,57 @@ async function bulkAssignIDs(){
   toast(eligible.length+' proctor(s) activated!','success');
   renderOnboard();badges();
 }
+async function confirmReOnboard(){
+  const existingId=CA.robId;
+  const newVendor=document.getElementById('robVendor').value;
+  cm('mROB');
+  await reOnboardProctor(existingId,{vendor:newVendor});
+}
+
 async function reOnboardProctor(existingId,newData){
-  let p=proctors.find(x=>x.id===existingId)||{id:existingId};
-  p.status='In Progress';p.stage=1;p.pid='';
-  p.bgv=newData.bgv||p.bgv||'';p.nda=newData.nda||p.nda||'';
-  p.ptype=newData.ptype||p.ptype||'';p.notes=newData.notes||p.notes||'';
-  p.upd=new Date().toISOString();p.vby='';p.vat=null;p.aat=null;p.oat=null;p.or='';p.on='';
-  if(!proctors.find(x=>x.id===existingId))proctors.push(p);
-  showLoading(true);
-  await saveProctor(p,false);
-  addLog('Re-onboarded',p.name,'Re-onboarded by '+CU.un);
-  showLoading(false);
-  toast(p.name+' re-onboarded! Status reset to In Progress.','success');
+  const old=proctors.find(x=>x.id===existingId);
+  if(!old){toast('Proctor record not found','error');return;}
+  const oldVendor=old.vendor;
+  const newVendor=newData.vendor||old.vendor;
+
+  showSaving('Re-onboarding '+old.name+'...');
+
+  // ── Step 1: Archive the old row ──────────────────────────────
+  old.status='Archived';
+  old.upd=new Date().toISOString();
+  await gasCall('updateProctor',{row:objToRow(P_COLS,old),id:old.id});
+
+  // ── Step 2: Create a fresh new row ───────────────────────────
+  const newP={
+    id:'p'+Date.now()+Math.random().toString(36).slice(2,6),
+    pid:'',
+    name:old.name,aadhaar:old.aadhaar,
+    vendor:newVendor,
+    phone:old.phone,email:old.email,
+    address:old.address,city:old.city,state:old.state,
+    dob:old.dob,gender:old.gender,
+    ptype:newData.ptype||old.ptype||'',
+    bgv:newData.bgv||old.bgv||'',
+    nda:newData.nda||old.nda||'',
+    notes:newData.notes||old.notes||'',
+    status:'In Progress',stage:1,
+    by:CU.un,at:new Date().toISOString(),upd:new Date().toISOString(),
+    vby:'',vat:null,aat:null,oat:null,or:'',on:''
+  };
+  proctors.push(newP);
+  await gasCall('checkAndAppendProctor',{row:objToRow(P_COLS,newP),id:newP.id});
+  localStorage.setItem('pp_proctors_cache',JSON.stringify(proctors));
+
+  const vendorNote=newVendor!==oldVendor?' | Vendor changed: '+oldVendor+' → '+newVendor:'';
+  addLog('Re-onboarded',newP.name,
+    'Archived old record ('+old.id+' / '+(old.pid||'no PID')+')'+
+    ' | New ID: '+newP.id+
+    vendorNote+
+    ' | By: '+CU.un);
+
+  hideSaving();
+  const vMsg=newVendor!==oldVendor?' under '+newVendor+' (was '+oldVendor+')':' under '+newVendor;
+  toast(newP.name+' re-onboarded'+vMsg+'! Old record archived.','success');
   badges();nav('onboarding');
 }
 
@@ -1795,7 +2086,8 @@ function exportTabCSV(tab){
   if(tab==='onboarding')list=proctors.filter(p=>p.status==='In Progress'||p.status==='Verified');
   else if(tab==='active')list=proctors.filter(p=>p.status==='Active');
   else if(tab==='offboarded')list=proctors.filter(p=>p.status==='Offboarded');
-  else list=proctors;
+  else if(tab==='history')list=proctors.filter(p=>p.status==='Archived');
+  else list=proctors.filter(p=>p.status!=='Archived');
   const BOM=String.fromCharCode(0xFEFF);
   const hdr='Proctor ID,Name,Vendor,Type,Phone,Email,City,State,Status,BGV,NDA,Created,Activated,Offboarded';
   const rows=list.map(p=>[p.pid||'',p.name,p.vendor,p.ptype||'',p.phone,p.email,p.city,p.state,
@@ -1847,13 +2139,18 @@ function handleBulkBGV(e){
 async function confirmBulkBGV(){
   const ok=(window._bgvResults||[]).filter(r=>r._ok);
   if(!ok.length){toast('No valid rows','error');return;}
-  showLoading(true);
-  for(const row of ok){
-    row._p.bgv=row.bgv;row._p.upd=new Date().toISOString();
-    await saveProctor(row._p,false);
-    addLog('BGV Added',row._p.name,'Bulk BGV by '+CU.un);
+  showBulkProgress('Updating BGV links...',ok.length);
+  const BATCH=4;let done=0;
+  for(let i=0;i<ok.length;i+=BATCH){
+    const batch=ok.slice(i,i+BATCH);
+    await Promise.all(batch.map(async row=>{
+      row._p.bgv=row.bgv;row._p.upd=new Date().toISOString();
+      await saveProctor(row._p,false);
+      addLog('BGV Added',row._p.name,'Bulk BGV by '+CU.un);
+      done++;updateBulkProgress(done,ok.length,row._p.name+' updated');
+    }));
   }
-  showLoading(false);
+  hideBulkProgress();
   document.getElementById('bgvPrev').innerHTML='';
   document.getElementById('bgvAct').style.display='none';
   document.getElementById('bgvFile').value='';
@@ -1896,7 +2193,7 @@ function startAutoRefresh() {
         const pg = active.id.replace('page-','');
         const renders = {
           dashboard:renderDash, proctors:renderPro, onboarding:renderOnboard,
-          active:renderActive, offboarded:renderOff, myProctors:renderMyPro, incomplete:renderInc
+          active:renderActive, offboarded:renderOff, history:renderHistory, myProctors:renderMyPro, incomplete:renderInc
         };
         if(renders[pg]) renders[pg]();
       }
@@ -1976,16 +2273,16 @@ function badges(){
   if(!CU)return;
   // nb-inc applies to ALL roles — compute once
   const isAdminOrTv=CU.role==='admin'||CU.role==='talview';
-  const incCount=proctors.filter(p=>!p.bgv&&(isAdminOrTv||p.vendor===CU.vendor)).length;
+  const incCount=proctors.filter(p=>p.status!=='Archived'&&!p.bgv&&(isAdminOrTv||p.vendor===CU.vendor)).length;
   const nbInc=document.getElementById('nb-inc');if(nbInc)nbInc.textContent=incCount;
 
   if(CU.role==='admin'){
-    const a=document.getElementById('nb-all');if(a)a.textContent=proctors.length;
-    const b=document.getElementById('nb-ip');if(b)b.textContent=proctors.filter(p=>p.status==='In Progress'||p.status==='Verified').length;
+    const a=document.getElementById('nb-all');if(a)a.textContent=proctors.filter(p=>p.status!=='Archived').length;
+    const b=document.getElementById('nb-ip');if(b)b.textContent=proctors.filter(p=>p.status==='In Progress'||p.status==='Verified').length; // Archived excluded by status check
     const c=document.getElementById('nb-act');if(c)c.textContent=proctors.filter(p=>p.status==='Active').length;
   } else {
     const isTalview=CU.role==='talview';
-    const mine=isTalview?proctors:proctors.filter(p=>p.vendor===CU.vendor);
+    const mine=isTalview?proctors.filter(p=>p.status!=='Archived'):proctors.filter(p=>p.vendor===CU.vendor&&p.status!=='Archived');
     const e=document.getElementById('nb-mine');if(e)e.textContent=mine.length;
   }
 }
