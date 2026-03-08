@@ -606,16 +606,7 @@ const VENDORS=['Sai','TSN','Avner','A&M','Atura','Awign'];
 const VC={'Sai':'SAI','TSN':'TSN','Avner':'AVN','A&M':'ANM','Atura':'ATU','Awign':'AWG'};
 const VCL={'Sai':'v-sai','TSN':'v-tsn','Avner':'v-avn','A&M':'v-anm','Atura':'v-atu','Awign':'v-awg'};
 
-const USERS={
-  Talview_Admin:    {pw:'fi3beErt', role:'admin',    name:'Talview Admin',     disp:'Administrator',            vendor:null,  locked:false},
-  Talview_Uploader: {pw:'MfcuVB5n', role:'talview',  name:'Talview Uploader',  disp:'Talview — Internal Upload', vendor:null,  locked:false},
-  Sai_Uploader:     {pw:'x9Jv8VQ4', role:'uploader', name:'SAI Uploader',      disp:'Vendor Uploader — Sai',     vendor:'Sai',   locked:true},
-  TSN_Uploader:     {pw:'EZSCgCqS', role:'uploader', name:'TSN Uploader',      disp:'Vendor Uploader — TSN',     vendor:'TSN',   locked:true},
-  Avner_Uploader:   {pw:'wikZJLBH', role:'uploader', name:'Avner Uploader',    disp:'Vendor Uploader — Avner',   vendor:'Avner', locked:true},
-  Atura_Uploader:   {pw:'37Js2WeV', role:'uploader', name:'Atura Uploader',    disp:'Vendor Uploader — Atura',   vendor:'Atura', locked:true},
-  AM_Uploader:      {pw:'swxfZtxQ', role:'uploader', name:'A&M Uploader',      disp:'Vendor Uploader — A&M',     vendor:'A&M',   locked:true},
-  Awign_Uploader:   {pw:'A93mMNpD', role:'uploader', name:'Awign Uploader',    disp:'Vendor Uploader — Awign',   vendor:'Awign', locked:true},
-};
+// Users authenticated via Supabase verify_login RPC — no hardcoded credentials
 
 let CU=null,proctors=[],logs=[],CA={},bulkVal=[],lastLoadTime=0,selectedIds=new Set();
 
@@ -762,35 +753,65 @@ function clearData(){
 // AUTH
 // ══════════════════════════════════════════════════
 async function doLogin(){
-  const u=document.getElementById('lu').value.trim();
-  const p=document.getElementById('lp').value;
+  const un=document.getElementById('lu').value.trim();
+  const pw=document.getElementById('lp').value;
   const err=document.getElementById('lerr');
-  if(!USERS[u]||USERS[u].pw!==p){
-    err.textContent='⚠️ Invalid username or password.';
-    document.getElementById('lp').value='';
-    return;
-  }
-  CU={...USERS[u],un:u};
+  if(!un||!pw){err.textContent='⚠️ Please enter username and password.';return;}
   err.textContent='';
-  document.getElementById('loginScreen').style.display='none';
-  document.getElementById('app').style.display='block';
-  document.getElementById('sAv').textContent=CU.name[0];
-  document.getElementById('sNm').textContent=CU.name;
-  document.getElementById('sRl').textContent=CU.disp;
-  buildNav();
-  showLoading(true);
-  await loadData();
-  // Login/logout not logged — reduces audit noise
-  const startPage = CU.role==='admin'?'dashboard':'myProctors';
-  nav(startPage);
-  badges();
-  const _wc=CU.role==='admin'?'Welcome, '+CU.name+'! '+proctors.length+' proctors loaded.':CU.role==='talview'?'Welcome, '+CU.name+'!':'Welcome, '+CU.name+'! '+proctors.filter(p=>p.vendor===CU.vendor).length+' '+CU.vendor+' proctors loaded.';
-  toast(_wc,'success');
-  // Persist session so page refresh doesn't log out
-  localStorage.setItem('pp_session', JSON.stringify({un:CU.un, pw:USERS[CU.un].pw}));
-  // Start auto-refresh + inactivity timer
-  startAutoRefresh();
-  resetInactivityTimer();
+
+  const btn=document.querySelector('.login-btn');
+  if(btn){btn.disabled=true;btn.textContent='Signing in...';}
+
+  try {
+    // Verify credentials via Supabase RPC — password never leaves as plain text in JS
+    const res = await fetch(SB_CONFIG.URL+'/rest/v1/rpc/verify_login',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SB_CONFIG.KEY,'Authorization':'Bearer '+SB_CONFIG.KEY},
+      body: JSON.stringify({p_username:un, p_password:pw})
+    });
+    if(!res.ok) throw new Error('Auth service error: '+res.status);
+    const rows = await res.json();
+
+    if(!rows||rows.length===0){
+      err.textContent='⚠️ Invalid username or password.';
+      document.getElementById('lp').value='';
+      if(btn){btn.disabled=false;btn.textContent='Sign In';}
+      return;
+    }
+
+    const u=rows[0];
+    const roleDisp={admin:'Administrator',talview:'Talview — Internal',vendor:'Vendor Coordinator'};
+    CU={
+      un:      u.username,
+      role:    u.role==='vendor'?'uploader':u.role,
+      name:    u.username.replace(/_/g,' '),
+      disp:    roleDisp[u.role]||u.role,
+      vendor:  u.vendor||null
+    };
+
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('app').style.display='block';
+    document.getElementById('sAv').textContent=CU.name[0];
+    document.getElementById('sNm').textContent=CU.name;
+    document.getElementById('sRl').textContent=CU.disp;
+    buildNav();
+    showLoading(true);
+    await loadData();
+    const startPage=CU.role==='admin'?'dashboard':'myProctors';
+    nav(startPage);badges();
+    const _wc=CU.role==='admin'?'Welcome, '+CU.name+'! '+proctors.filter(p=>p.status!=='Archived').length+' proctors loaded.':
+              CU.role==='talview'?'Welcome, '+CU.name+'!':
+              'Welcome, '+CU.name+'! '+proctors.filter(p=>p.vendor===CU.vendor&&p.status!=='Archived').length+' '+CU.vendor+' proctors loaded.';
+    toast(_wc,'success');
+    // Persist session (no password stored — just identity)
+    localStorage.setItem('pp_session', JSON.stringify({un:CU.un,role:CU.role,name:CU.name,disp:CU.disp,vendor:CU.vendor}));
+    startAutoRefresh();resetInactivityTimer();
+
+  } catch(e) {
+    console.error('Login error:',e);
+    err.textContent='⚠️ Login failed: '+e.message;
+    if(btn){btn.disabled=false;btn.textContent='Sign In';}
+  }
 }
 
 function doLogout(){
@@ -821,18 +842,23 @@ function clearInactivityTimer(){if(_inactTimer){clearTimeout(_inactTimer);_inact
 
 // ── Restore session on page load ──────────────────────────────
 window.addEventListener('DOMContentLoaded',async()=>{
-  if(SB_CONFIG.APPS_SCRIPT_URL==='YOUR_APPS_SCRIPT_URL'){
-    const w=document.getElementById('cfgWarning');if(w)w.style.display='block';
-  }
   const saved=localStorage.getItem('pp_session');
   if(saved){
     try{
-      const {un,pw}=JSON.parse(saved);
-      if(USERS[un]&&USERS[un].pw===pw){
-        // Auto-restore session
-        document.getElementById('lu').value=un;
-        document.getElementById('lp').value=pw;
-        await doLogin();
+      const s=JSON.parse(saved);
+      if(s.un&&s.role){
+        // Restore session from stored identity (no password re-check needed)
+        CU={un:s.un,role:s.role,name:s.name||s.un.replace(/_/g,' '),disp:s.disp||s.role,vendor:s.vendor||null};
+        document.getElementById('loginScreen').style.display='none';
+        document.getElementById('app').style.display='block';
+        document.getElementById('sAv').textContent=CU.name[0];
+        document.getElementById('sNm').textContent=CU.name;
+        document.getElementById('sRl').textContent=CU.disp;
+        buildNav();showLoading(true);
+        await loadData();
+        const startPage=CU.role==='admin'?'dashboard':'myProctors';
+        nav(startPage);badges();
+        startAutoRefresh();resetInactivityTimer();
         return;
       }
     }catch(e){}
@@ -1131,57 +1157,35 @@ function renderAudit(){
 // CREDENTIALS PAGE (admin only)
 // ══════════════════════════════════════════════════
 function renderCreds(){
-  const groups=[
-    {
-      role:'👑 Administrator',color:'var(--accent5)',
-      desc:'Full access — dashboard, all proctors, verify, assign IDs, offboard, edit, audit log.',
-      users:[{un:'Talview_Admin',pw:'fi3beErt',name:'Talview Admin',scope:'All vendors — full control'}]
-    },
-    {
-      role:'🏢 Talview Internal Uploader',color:'var(--accent)',
-      desc:'Can upload proctors for any vendor. Cannot view statistics or other vendor data.',
-      users:[{un:'Talview_Uploader',pw:'MfcuVB5n',name:'Talview Uploader',scope:'Any vendor (selectable on form)'}]
-    },
-    {
-      role:'📤 Vendor Uploaders',color:'var(--warning)',
-      desc:'Each vendor has one dedicated login. Locked to their own vendor — cannot see other vendors\' data.',
-      users:[
-        {un:'Sai_Uploader',    pw:'x9Jv8VQ4',name:'SAI Uploader',   scope:'Sai only'},
-        {un:'TSN_Uploader',    pw:'EZSCgCqS',name:'TSN Uploader',   scope:'TSN only'},
-        {un:'Avner_Uploader',  pw:'wikZJLBH',name:'Avner Uploader', scope:'Avner only'},
-        {un:'Atura_Uploader',  pw:'37Js2WeV',name:'Atura Uploader', scope:'Atura only'},
-        {un:'AM_Uploader',     pw:'swxfZtxQ',name:'A&M Uploader',   scope:'A&M only'},
-        {un:'Awign_Uploader',  pw:'A93mMNpD',name:'Awign Uploader', scope:'Awign only'},
-      ]
-    }
-  ];
-  document.getElementById('credContent').innerHTML=`
-    <div class="al al-w" style="margin-bottom:20px;">🔒 Share each credential only with the intended person. Do not share this page with uploaders.</div>
+  const el=document.getElementById('credBody');
+  if(!el)return;
+  el.innerHTML=`
     <div class="al al-i" style="margin-bottom:20px;">
-      💾 <strong>Data Storage:</strong> All proctor data is saved to this browser's local storage and survives page refreshes. 
-      Data is stored on <strong>this device only</strong> — other users on different devices have their own copy until SharePoint is connected.<br><br>
-      <button class="btn btn-danger btn-sm" onclick="if(confirm('⚠️ This will permanently delete ALL proctor data from this browser. Are you sure?')){{clearData();toast('All local data cleared','warning');}}">🗑️ Clear All Local Data</button>
+      🔐 Credentials are now stored securely in Supabase with bcrypt hashed passwords.<br>
+      To manage users, go to your <strong>Supabase Dashboard → Table Editor → users</strong> table.<br><br>
+      To add a new user, run in SQL Editor:<br>
+      <code style="display:block;margin-top:8px;padding:10px;background:var(--surface2);border-radius:6px;font-size:12px;">
+        INSERT INTO users (username, password, role, vendor)<br>
+        VALUES ('New_User', crypt('their_password', gen_salt('bf', 10)), 'vendor', 'VendorName');
+      </code>
+      <br>To change a password:<br>
+      <code style="display:block;margin-top:8px;padding:10px;background:var(--surface2);border-radius:6px;font-size:12px;">
+        UPDATE users SET password = crypt('new_password', gen_salt('bf', 10)) WHERE username = 'username_here';
+      </code>
     </div>
-    ${groups.map(g=>`
-      <div style="margin-bottom:24px;">
-        <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px;">${g.role}</div>
-        <div style="font-size:12px;color:var(--text3);margin-bottom:12px;">${g.desc}</div>
-        ${g.users.map(u=>`
-          <div class="cred-box">
-            <div class="cred-role" style="color:${g.color}">${u.name} — ${u.scope}</div>
-            <div class="cred-row"><span class="cred-label">Username</span><span class="cred-val">${u.un}</span></div>
-            <div class="cred-row"><span class="cred-label">Password</span><span class="cred-val">${u.pw}</span></div>
-          </div>`).join('')}
-      </div>`).join('')}
-    <div class="al al-i">
-      <strong>📊 Google Sheets Backend</strong><br><br>
-      This portal saves all data to Google Sheets in real time. To configure:<br><br>
-      1. Open the HTML file and find <code>SB_CONFIG</code> near the top of the script<br>
-      2. Fill in your <strong>API_KEY</strong> and <strong>SHEET_ID</strong><br>
-      3. Create sheets named <strong>Proctors</strong>, <strong>AuditLog</strong>, and <strong>Credentials</strong> with the correct column headers<br><br>
-      <strong>Vendor credentials</strong> can be managed directly in the <strong>Credentials</strong> sheet — no code changes needed to update passwords or add new vendors.<br><br>
-      <strong>Future upgrade path:</strong> Swap Google Sheets for SharePoint Lists when your IT team is ready — the portal UI stays identical.
-    </div>`;
+    <table class="tbl">
+      <thead><tr><th>Username</th><th>Role</th><th>Vendor</th><th>Password</th></tr></thead>
+      <tbody>
+        <tr><td>Talview_Admin</td><td><span class="badge b-ac">Admin</span></td><td>All</td><td style="color:var(--text3);font-size:12px">••••••••  (hashed)</td></tr>
+        <tr><td>Talview_Coordinator</td><td><span class="badge b-ve">Talview</span></td><td>All</td><td style="color:var(--text3);font-size:12px">••••••••  (hashed)</td></tr>
+        <tr><td>Sai_Coordinator</td><td><span class="badge b-ip">Vendor</span></td><td>Sai</td><td style="color:var(--text3);font-size:12px">••••••••  (hashed)</td></tr>
+        <tr><td>TSN_Coordinator</td><td><span class="badge b-ip">Vendor</span></td><td>TSN</td><td style="color:var(--text3);font-size:12px">••••••••  (hashed)</td></tr>
+        <tr><td>Avner_Coordinator</td><td><span class="badge b-ip">Vendor</span></td><td>Avner</td><td style="color:var(--text3);font-size:12px">••••••••  (hashed)</td></tr>
+        <tr><td>Atura_Coordinator</td><td><span class="badge b-ip">Vendor</span></td><td>Atura</td><td style="color:var(--text3);font-size:12px">••••••••  (hashed)</td></tr>
+        <tr><td>AM_Coordinator</td><td><span class="badge b-ip">Vendor</span></td><td>A&amp;M</td><td style="color:var(--text3);font-size:12px">••••••••  (hashed)</td></tr>
+        <tr><td>Awign_Coordinator</td><td><span class="badge b-ip">Vendor</span></td><td>Awign</td><td style="color:var(--text3);font-size:12px">••••••••  (hashed)</td></tr>
+      </tbody>
+    </table>`;
 }
 
 // ══════════════════════════════════════════════════
@@ -2276,10 +2280,7 @@ document.querySelectorAll('.mo').forEach(o=>o.addEventListener('click',e=>{if(e.
 
 // cfgWarning + session restore both handled in the DOMContentLoaded above
 window.addEventListener('DOMContentLoaded',()=>{
-  if(SB_CONFIG.APPS_SCRIPT_URL==='YOUR_APPS_SCRIPT_URL'){
-    const w=document.getElementById('cfgWarning');
-    if(w)w.style.display='block';
-  }
+  // Supabase config is hardcoded — no runtime check needed
 });
 </script>
 </body>
