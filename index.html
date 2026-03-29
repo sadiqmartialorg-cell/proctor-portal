@@ -384,7 +384,7 @@ body.role-vendor .vendor-filter{display:none!important;}
           <div class="tw">
             <div class="ttb">
               <input class="si" placeholder="🔍 Name, ID, Aadhaar..." id="sPro" oninput="renderPro()"/>
-              <select class="fsel" id="fVen" onchange="renderPro()"><option value="">All Vendors</option></select>
+              <select class="fsel" id="fVen" onchange="renderPro()"><option value="">All Managed By</option></select>
               <select class="fsel" id="fSt" onchange="renderPro()"><option value="">All Status</option><option>In Progress</option><option>Verified</option><option>Active</option><option>Offboarded</option></select>
               <span class="tc2" id="pCnt"></span>
               <button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬇ Export</button>
@@ -397,7 +397,7 @@ body.role-vendor .vendor-filter{display:none!important;}
         <div class="page" id="page-interviewSelects">
           <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
             <input class="si" style="flex:1;min-width:180px" placeholder="🔍 Name, email..." id="sIS" oninput="renderInterviewSelects()"/>
-            <select class="fsel" id="fISV" onchange="renderInterviewSelects()"><option value="">All Vendors</option></select>
+            <select class="fsel" id="fISV" onchange="renderInterviewSelects()"><option value="">All Managed By</option></select>
             <select class="fsel" id="fISStatus" onchange="renderInterviewSelects()">
               <option value="">All Form Status</option>
               <option value="not_sent">Not Sent</option>
@@ -435,7 +435,7 @@ body.role-vendor .vendor-filter{display:none!important;}
           
           <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center;position:relative;z-index:10;">
             <input class="si" style="flex:1;min-width:180px" placeholder="🔍 Name, phone, email..." id="sOnb" oninput="renderOnboard()"/>
-            <select class="fsel" id="fOnbV" onchange="renderOnboard()"><option value="">All Vendors</option></select>
+            <select class="fsel" id="fOnbV" onchange="renderOnboard()"><option value="">All Managed By</option></select>
             <button class="btn btn-ghost btn-sm" onclick="exportTabCSV('onboarding')">⬇ Export</button>
           </div>
           <div class="tw"><div class="ox"><table><thead><tr><th>Name</th><th>Managed By</th><th>Type</th><th>Submitted</th><th>BGV</th><th>Demo</th><th>Assessment</th><th>NDA</th><th>Docs</th><th>Actions</th></tr></thead><tbody id="oBody"></tbody></table></div></div>
@@ -446,7 +446,7 @@ body.role-vendor .vendor-filter{display:none!important;}
           
           <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center;position:relative;z-index:10;">
             <input class="si" style="flex:1;min-width:180px" placeholder="🔍 Name, ID, phone..." id="sAct" oninput="renderActive()"/>
-            <select class="fsel" id="fActV" onchange="renderActive()"><option value="">All Vendors</option></select>
+            <select class="fsel" id="fActV" onchange="renderActive()"><option value="">All Managed By</option></select>
             <button class="btn btn-ghost btn-sm" onclick="exportTabCSV('active')">⬇ Export</button>
           </div>
           <div class="tw"><div class="ox"><table><thead><tr><th>ID</th><th>Name</th><th>Managed By</th><th>Type</th><th>Phone</th><th>BGV</th><th>Demo</th><th>Assessment</th><th>Activated</th><th>Actions</th></tr></thead><tbody id="aBody"></tbody></table></div></div>
@@ -461,7 +461,7 @@ body.role-vendor .vendor-filter{display:none!important;}
           <div id="offHistTab0">
             <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
               <input class="si" style="flex:1;min-width:180px" placeholder="🔍 Name, ID, phone..." id="sOff" oninput="renderOff()"/>
-              <select class="fsel" id="fOffV" onchange="renderOff()"><option value="">All Vendors</option></select>
+              <select class="fsel" id="fOffV" onchange="renderOff()"><option value="">All Managed By</option></select>
               <button class="btn btn-ghost btn-sm" onclick="exportTabCSV('offboarded')">⬇ Export</button>
             </div>
             <div class="tw"><div class="ox"><table><thead><tr><th>ID</th><th>Name</th><th>Managed By</th><th>Offboarded</th><th>Reason</th><th>Actions</th></tr></thead><tbody id="offBody"></tbody></table></div></div>
@@ -470,7 +470,7 @@ body.role-vendor .vendor-filter{display:none!important;}
             <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
               <input id="sHist" placeholder="Search name, Aadhaar..." style="flex:1;min-width:160px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius2);padding:8px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;" oninput="renderHistory()">
               <select class="vendor-filter" id="fHistV" onchange="renderHistory()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius2);padding:8px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;">
-                <option value="">All Vendors</option>
+                <option value="">All Managed By</option>
                 
               </select>
               <button class="btn btn-ghost btn-sm" onclick="exportTabCSV('history')">⬇ Export</button>
@@ -567,7 +567,7 @@ body.role-vendor .vendor-filter{display:none!important;}
               <option value="Offboarded">Offboarded</option>
             </select>
             <select class="fsel" id="fIncVendor" onchange="renderInc()">
-              <option value="">All Vendors</option>
+              <option value="">All Managed By</option>
               <option>Sai</option><option>TSN</option><option>Avner</option>
               <option>A&amp;M</option><option>ATS</option><option>Awign</option>
             </select>
@@ -607,12 +607,12 @@ body.role-vendor .vendor-filter{display:none!important;}
           <div id="evalTab0">
             <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
               <input class="si" style="flex:1;min-width:180px" placeholder="🔍 Name, email..." id="sDemoAssign" oninput="renderDemoAssign()"/>
-              <select class="fsel" id="fDemoV" onchange="renderDemoAssign()"><option value="">All Vendors</option></select>
+              <select class="fsel" id="fDemoV" onchange="renderDemoAssign()"><option value="">All Managed By</option></select>
               <select class="fsel" id="fDemoPtype" onchange="renderDemoAssign()"><option value="">All Types</option><option>WFO</option><option>ODP</option><option>Hybrid</option></select>
               <button class="btn btn-ghost btn-sm" onclick="exportEvalTab('demo')">⬇ Export</button>
               <label style="font-size:13px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;"><input type="checkbox" id="demoSelAll" onchange="toggleDemoAll(this.checked)" style="accent-color:var(--accent)"/> Select All</label>
             </div>
-            <div class="al al-i" style="margin-bottom:12px;">Only proctors with Demo status <strong>Ready</strong> appear here. Vendors mark readiness from the In Progress tab.</div>
+            <div class="al al-i" style="margin-bottom:12px;">Only proctors with Demo status <strong>Ready</strong> appear here. Coordinators mark readiness from the In Progress tab.</div>
             <div class="tw" style="margin-bottom:16px;"><div class="ox"><table><thead><tr><th style="width:32px"></th><th>Name</th><th>Managed By</th><th>Type</th><th>Demo Status</th><th>Attempts</th></tr></thead><tbody id="demoAssignBody"></tbody></table></div></div>
             <div id="demoAssignPanel" style="display:none;background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);padding:20px;max-width:560px;">
               <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px;" id="demoAssignTitle">Assign Demo Panel</div>
@@ -639,7 +639,7 @@ body.role-vendor .vendor-filter{display:none!important;}
             <div id="assessSub0">
               <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
                 <input class="si" style="flex:1;min-width:180px" placeholder="🔍 Name, email..." id="sAssessAssign" oninput="renderAssessAssign()"/>
-                <select class="fsel" id="fAssessV" onchange="renderAssessAssign()"><option value="">All Vendors</option></select>
+                <select class="fsel" id="fAssessV" onchange="renderAssessAssign()"><option value="">All Managed By</option></select>
                 <select class="fsel" id="fAssessPtype" onchange="renderAssessAssign()"><option value="">All Types</option><option>WFO</option><option>ODP</option><option>Hybrid</option></select>
                 <button class="btn btn-ghost btn-sm" onclick="exportEvalTab('assessment')">⬇ Export Ready List</button>
               </div>
@@ -696,7 +696,7 @@ body.role-vendor .vendor-filter{display:none!important;}
               <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
                 <input class="si" style="flex:1;min-width:180px" placeholder="🔍 Name, email..." id="sEvalResDe" oninput="renderEvalResults('demo')"/>
                 <select class="fsel" id="fEvalResResultDe" onchange="renderEvalResults('demo')"><option value="">All Results</option><option>Pass</option><option>Reattempt</option><option>No Show</option><option>Reschedule</option></select>
-                <select class="fsel" id="fEvalResVDe" onchange="renderEvalResults('demo')"><option value="">All Vendors</option></select>
+                <select class="fsel" id="fEvalResVDe" onchange="renderEvalResults('demo')"><option value="">All Managed By</option></select>
                 <button class="btn btn-ghost btn-sm" onclick="exportEvalTab('demo')">⬇ Export</button>
               </div>
               <div class="tw"><div class="ox"><table><thead><tr><th>Proctor</th><th>Panel</th><th>Scheduled</th><th>Score</th><th>Certified Date</th><th>Attempt</th><th>Result</th><th>Comment</th><th>Actions</th></tr></thead><tbody id="evalResBodyDe"></tbody></table></div></div>
@@ -705,7 +705,7 @@ body.role-vendor .vendor-filter{display:none!important;}
               <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
                 <input class="si" style="flex:1;min-width:180px" placeholder="🔍 Name, email..." id="sEvalResAs" oninput="renderEvalResults('assessment')"/>
                 <select class="fsel" id="fEvalResResultAs" onchange="renderEvalResults('assessment')"><option value="">All Results</option><option>Pass</option><option>Reattempt</option><option>No Show</option><option>Reschedule</option></select>
-                <select class="fsel" id="fEvalResVAs" onchange="renderEvalResults('assessment')"><option value="">All Vendors</option></select>
+                <select class="fsel" id="fEvalResVAs" onchange="renderEvalResults('assessment')"><option value="">All Managed By</option></select>
                 <button class="btn btn-ghost btn-sm" onclick="exportEvalTab('assessment')">⬇ Export</button>
               </div>
               <div class="tw"><div class="ox"><table><thead><tr><th>Proctor</th><th>Panel</th><th>Scheduled</th><th>Score</th><th>Certified Date</th><th>Attempt</th><th>Result</th><th>Comment</th><th>Actions</th></tr></thead><tbody id="evalResBodyAs"></tbody></table></div></div>
@@ -733,7 +733,7 @@ body.role-vendor .vendor-filter{display:none!important;}
             <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
               <input type="date" id="fWsSchedDate" onchange="renderScheduled()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius2);padding:6px 12px;color:var(--text);font-size:13px;outline:none;"/>
               <select class="fsel" id="fWsSchedType" onchange="renderScheduled()"><option value="">All Types</option><option value="demo">Demo</option><option value="assessment">Assessment</option></select>
-              <select class="fsel" id="fWsSchedV" onchange="renderScheduled()"><option value="">All Vendors</option></select>
+              <select class="fsel" id="fWsSchedV" onchange="renderScheduled()"><option value="">All Managed By</option></select>
               <select class="fsel" id="fWsSchedPtype" onchange="renderScheduled()"><option value="">All Proctor Types</option><option>WFO</option><option>ODP</option><option>Hybrid</option></select>
               <button class="btn btn-ghost btn-sm" onclick="exportScheduled()">⬇ Export</button>
               <button class="btn btn-ghost btn-sm" onclick="document.getElementById('fWsSchedDate').value='';renderScheduled()">Clear Date</button>
@@ -819,7 +819,7 @@ body.role-vendor .vendor-filter{display:none!important;}
           <div id="certTab1" style="display:none;">
             <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
               <input class="si" style="flex:1;min-width:180px" placeholder="🔍 Name, ID..." id="sReg" oninput="renderRegistry()"/>
-              <select class="fsel" id="fRegVen" onchange="renderRegistry()"><option value="">All Vendors</option></select>
+              <select class="fsel" id="fRegVen" onchange="renderRegistry()"><option value="">All Managed By</option></select>
               <select class="fsel" id="fRegCust" onchange="renderRegistry()"><option value="">All Customers</option></select>
               <button class="btn btn-ghost btn-sm" onclick="exportRegistry()">⬇ Export</button>
             </div>
@@ -1217,26 +1217,39 @@ const SB_CONFIG = {
 const T_PROCTORS='proctors', T_AUDIT='audit_log';
 
 // ══════════════════════════════════════════════════
-// EMAIL CONFIG — routed via Supabase Edge Function
-// (Brevo API key stored as Supabase secret, never in frontend)
+// BREVO EMAIL CONFIG
 // ══════════════════════════════════════════════════
+// Brevo config loaded from Supabase app_config table on login — NOT hardcoded
+let BREVO_API_KEY = '';
 const BREVO_SENDER = { name: 'Talview Managed Services', email: 'sadiq.a@talview.com' };
 const BREVO_DL = 'managedservices@talview.com';
-const PORTAL_BASE_URL = 'https://sadiqmartialorg-cell.github.io/proctor-portal';
-const EDGE_FN_URL = 'https://vukijbppuchsmwoyrbjt.supabase.co/functions/v1/send-email';
+let PORTAL_BASE_URL = window.location.href.split('?')[0].replace(/\/[^/]*$/, '');
+
+async function loadAppConfig(){
+  try{
+    const rows = await sbFetch('GET','app_config',{select:'key,value'});
+    rows.forEach(r=>{
+      if(r.key==='brevo_api_key') BREVO_API_KEY=r.value;
+      if(r.key==='portal_base_url') PORTAL_BASE_URL=r.value;
+    });
+  }catch(e){ console.warn('app_config load failed:',e.message); }
+}
 
 async function sendBrevoEmail({ to, subject, html, replyTo }) {
+  // to: string (single email) or array of {email, name}
   const toArr = Array.isArray(to)
     ? to
     : [{ email: to, name: to.split('@')[0] }];
   try {
-    const res = await fetch(EDGE_FN_URL, {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + SB_CONFIG.KEY,
+        'accept': 'application/json',
+        'api-key': BREVO_API_KEY,
+        'content-type': 'application/json',
       },
       body: JSON.stringify({
+        sender: BREVO_SENDER,
         to: toArr,
         subject,
         htmlContent: html,
@@ -1245,7 +1258,7 @@ async function sendBrevoEmail({ to, subject, html, replyTo }) {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      console.warn('Email send failed:', JSON.stringify(err));
+      console.warn('Brevo send failed:', err);
       return false;
     }
     return true;
@@ -1260,7 +1273,7 @@ async function emailVendorMarkedReady(proctor, evalType) {
   const subject = `[Action Required] ${proctor.name} is Ready for ${evalType === 'demo' ? 'Demo' : 'Assessment'}`;
   const html = emailTemplate(`
     <h2 style="color:#1B3A6B;margin:0 0 16px">Proctor Ready for ${evalType === 'demo' ? 'Demo Evaluation' : 'Assessment'}</h2>
-    <p>The following proctor has been marked as <strong>Ready</strong> by their vendor coordinator and requires scheduling:</p>
+    <p>The following proctor has been marked as <strong>Ready</strong> by their coordinator and requires scheduling:</p>
     ${proctorInfoBlock(proctor)}
     <p style="color:#595959;font-size:14px;">Please log in to the <a href="${PORTAL_BASE_URL}" style="color:#2E75B6;">Proctor Management Portal</a> to assign a panel and schedule the ${evalType}.</p>
   `);
@@ -1515,9 +1528,8 @@ async function sbFetch(method,table,opts={}){
 async function loadData() {
   showLoading(true);
   try {
-    // Load vendors dynamically
+    // Refresh vendors in case new ones were added during session
     await loadVendorsDB();
-    setTimeout(populateAllVendorDropdowns, 100);
     // Load proctors from Supabase (credentials stay hardcoded in JS)
     // Vendor role: fetch only their own proctors — server-side isolation
     const rows = CU.role==='vendor'
@@ -1652,8 +1664,14 @@ async function doLogin(){
     document.getElementById('sAv').textContent=CU.name[0];
     document.getElementById('sNm').textContent=CU.name;
     document.getElementById('sRl').textContent=CU.disp;
+
+    // Load vendors + app config BEFORE building nav and navigating
+    // This ensures all dropdowns are populated correctly from the start
+    await Promise.all([loadVendorsDB(), loadAppConfig()]);
+
     buildNav();
     populateStateDropdowns();
+    populateAllVendorDropdowns();
 
     // ── Fast path: load from cache first, show page immediately ──
     const cached=localStorage.getItem('pp_proctors_cache');
@@ -1672,6 +1690,7 @@ async function doLogin(){
     if(ls)ls.textContent=cached?'Syncing...':'Loading...';
     silentRefresh(true).then(()=>{
       badges();
+      populateAllVendorDropdowns();
       // Re-render current page with fresh data
       const cur=document.querySelector('.page.active');
       if(cur){
@@ -1747,6 +1766,10 @@ window.addEventListener('DOMContentLoaded',async()=>{
         const cached2=localStorage.getItem('pp_proctors_cache');
         if(cached2){try{proctors=JSON.parse(cached2);lastLoadTime=Date.now()-55000;}catch(e){proctors=[];}}
         populateStateDropdowns();
+        // Ensure vendors loaded before rendering
+        await loadVendorsDB();
+        await loadAppConfig();
+        populateAllVendorDropdowns();
         const startPage=CU.role==='admin'?'dashboard':CU.role==='talview'?'workspace':'myProctors';
         nav(startPage);badges();
         if(CU.role==='talview') loadTodayTasksBadge();
@@ -1843,7 +1866,6 @@ function buildNav(){
     setTimeout(applyVendorLock,50);
   }
   badges();
-  setTimeout(populateAllVendorDropdowns,200);
 }
 
 function toggleNavSec(id, el){
@@ -1879,22 +1901,34 @@ function populateStateDropdowns(){
   });
 }
 
+// Explicit list of select IDs that should contain vendor/managed-by options
+const VENDOR_SELECT_IDS=[
+  'fVen','fOnbV','fActV','fISV','fIncVendor','fHistV',
+  'fDemoV','fAssessV','fSchedV','fWsSchedV',
+  'fEvalResVDe','fEvalResVAs','fRegVen',
+  'f_vendor','ef_v','eisVendor',
+  'robVendor','bulkAssessPanelSel'
+];
+
 function populateAllVendorDropdowns(){
-  if(!VENDORS.length)return; // DB not loaded yet — skip
-  document.querySelectorAll('select').forEach(sel=>{
-    if(!sel.options.length)return;
-    const first=sel.options[0].text;
-    const isVendorSel=(
-      first==='All Vendors'||first==='Select Vendor'||
-      first==='Select Managed By...'||first==='All Managed By'||
-      first==='Select...'  // covers eisVendor in Edit Interview Select modal
-    );
-    if(!isVendorSel)return;
+  if(!VENDORS.length)return;
+  VENDOR_SELECT_IDS.forEach(id=>{
+    const sel=document.getElementById(id);
+    if(!sel)return;
     const cur=sel.value;
+    // Keep only the first blank/all option, rebuild the rest
     while(sel.options.length>1)sel.remove(1);
-    VENDORS.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});
+    VENDORS.forEach(v=>{
+      const o=document.createElement('option');
+      o.value=v;o.textContent=v;
+      sel.appendChild(o);
+    });
     if(cur&&VENDORS.includes(cur))sel.value=cur;
   });
+  // Also update any dynamic vendor select in renderVendorAdmin / modals
+  // by refreshing the rendered admin page if it's active
+  const vendorPage=document.getElementById('page-vendors');
+  if(vendorPage&&vendorPage.classList.contains('active'))renderVendorAdmin();
 }
 
 function applyVendorLock(){
@@ -1938,6 +1972,8 @@ function nav(pg){
     if(!customers||!customers.length){loadCustomers().then(initCertPage);}else{initCertPage();}
   }
   if(pg==='evaluations')initEvalPage();
+  // Repopulate vendor dropdowns on each page nav (in case they weren't ready on initial load)
+  if(VENDORS.length)populateAllVendorDropdowns();
   if(pg==='workspace')initWorkspace();
   if(pg==='formLinks')renderFormLinks();
   if(pg==='interviewSelects')renderInterviewSelects();
@@ -4022,6 +4058,7 @@ async function loadPrevAttempts(proctorId, type, containerId){
 
 // ── DEMO TAB ──────────────────────────────────────
 function renderDemoAssign(){
+  if(VENDORS.length)populateAllVendorDropdowns();
   const vf=document.getElementById('fDemoV')?.value||'';
   const pt=document.getElementById('fDemoPtype')?.value||'';
   const sq=(document.getElementById('sDemoAssign')?.value||'').toLowerCase();
@@ -4100,6 +4137,7 @@ function assessSubTab(i){
 }
 
 function renderAssessAssign(){
+  if(VENDORS.length)populateAllVendorDropdowns();
   const vf=document.getElementById('fAssessV')?.value||'';
   const pt=document.getElementById('fAssessPtype')?.value||'';
   const sq=(document.getElementById('sAssessAssign')?.value||'').toLowerCase();
@@ -4248,6 +4286,7 @@ async function renderScheduled(){
   const el=document.getElementById('schedBody');if(!el)return;
   el.innerHTML='<tr><td colspan="8" style="padding:16px;text-align:center;color:var(--text3);">Loading...</td></tr>';
   // Support both workspace filter IDs and standalone IDs
+  if(VENDORS.length)populateAllVendorDropdowns();
   const ft=document.getElementById('fWsSchedType')?.value||document.getElementById('fSchedType')?.value||'';
   const fv=document.getElementById('fWsSchedV')?.value||document.getElementById('fSchedV')?.value||'';
   const fd3=document.getElementById('fWsSchedDate')?.value||document.getElementById('fSchedDate')?.value||'';
@@ -5011,23 +5050,21 @@ async function deleteNote(id){
 // ══════════════════════════════════════════════════
 async function loadVendorsDB(){
   try{
-    // Try with active filter first, fall back to all rows if empty (handles RLS differences)
-    let rows=await sbFetch('GET',T_VENDORS+'?active=eq.true',{select:'*',order:'name.asc'});
-    if(!rows||!rows.length){
-      console.warn('loadVendorsDB: active=true returned empty, trying without filter...');
-      rows=await sbFetch('GET',T_VENDORS,{select:'*',order:'name.asc'});
-    }
-    if(!rows||!rows.length){
-      console.warn('loadVendorsDB: no vendors found in DB at all');
-      return;
-    }
-    console.log('loadVendorsDB: loaded',rows.length,'vendors:',rows.map(r=>r.name));
+    const rows=await sbFetch('GET',T_VENDORS+'?active=eq.true',{select:'*',order:'name.asc'});
+    if(!rows||!rows.length)return;
     VENDOR_DATA=rows;
     VENDORS=rows.map(r=>r.name);
-    rows.forEach(r=>{VC[r.name]=r.code||r.name.slice(0,3).toUpperCase();VCL[r.name]='v-'+(r.code||'def').toLowerCase();});
-    // Refresh ALL vendor dropdowns across every page
-    populateAllVendorDropdowns();
-  }catch(e){console.error('loadVendorsDB failed:',e.message);}
+    rows.forEach(r=>{VC[r.name]=r.code;VCL[r.name]='v-'+r.code.toLowerCase();});
+    // Refresh all vendor dropdowns
+    document.querySelectorAll('select.fsel, select[id^="f"][id$="V"], select[id^="f"][id$="Ven"]').forEach(sel=>{
+      if(sel.options.length>0&&sel.options[0].value===''){
+        const cur=sel.value;
+        while(sel.options.length>1)sel.remove(1);
+        VENDORS.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});
+        if(cur)sel.value=cur;
+      }
+    });
+  }catch(e){console.warn('loadVendorsDB failed:',e.message);}
 }
 
 function vendorOpts(selected=''){
@@ -5218,13 +5255,7 @@ function renderInterviewSelects(){
   const isReadOnly=CU.role==='talview'; // Talview coord sees data but no actions
   // Populate vendor filter
   const vf=document.getElementById('fISV');
-  // Always repopulate vendor filter to pick up latest VENDORS from DB
-  if(vf){
-    const cur=vf.value;
-    while(vf.options.length>1)vf.remove(1);
-    VENDORS.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;vf.appendChild(o);});
-    if(cur&&VENDORS.includes(cur))vf.value=cur;
-  }
+  if(vf&&vf.options.length<=1){VENDORS.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;vf.appendChild(o);});}
   // Hide import/export actions for read-only
   const importBtn=document.querySelector('#page-interviewSelects button[onclick="showImportIS()"]');
   if(importBtn)importBtn.style.display=isReadOnly?'none':'';
@@ -5272,17 +5303,10 @@ function openEditIS(pid){
   document.getElementById('eisEmail').value=p.email||'';
   document.getElementById('eisEmailErr').textContent='';
   document.getElementById('eisNotes').value=p.notes||'';
-  // Populate vendor dropdown — always rebuild from live VENDORS list
+  // Populate vendor dropdown
   const vSel=document.getElementById('eisVendor');
   if(vSel){
-    if(!VENDORS.length){
-      // VENDORS not loaded yet — trigger a reload then open modal
-      loadVendorsDB().then(()=>{
-        vSel.innerHTML='<option value="">Select...</option>'+VENDORS.map(v=>`<option value="${v}"${v===p.vendor?' selected':''}>${v}</option>`).join('');
-      });
-    } else {
-      vSel.innerHTML='<option value="">Select...</option>'+VENDORS.map(v=>`<option value="${v}"${v===p.vendor?' selected':''}>${v}</option>`).join('');
-    }
+    vSel.innerHTML='<option value="">Select...</option>'+VENDORS.map(v=>`<option value="${v}"${v===p.vendor?' selected':''}>${v}</option>`).join('');
   }
   // Ptype
   const ptSel=document.getElementById('eisPtype');
@@ -5397,42 +5421,44 @@ async function confirmImportIS(){
 
 async function sendOnboardingLink(proctorId){
   const p=proctors.find(x=>x.id===proctorId);if(!p)return;
-  if(!p.email){toast('No email address found for this proctor','error');return;}
-
-  const btn=document.querySelector(`button[onclick="sendOnboardingLink('${proctorId}')"]`);
-  if(btn){btn.disabled=true;btn.textContent='Sending...';}
-
+  if(!p.email){toast('Proctor has no email address — edit the record first','error');return;}
   const token=p.form_link_token||crypto.randomUUID().replace(/-/g,'');
-  const base=window.location.href.split('?')[0];
-  const url=base+'?pubform=1&vendor='+encodeURIComponent(p.vendor)+'&ptype='+encodeURIComponent(p.ptype)+'&email='+encodeURIComponent(p.email)+'&token='+token;
+  const base=PORTAL_BASE_URL||window.location.href.split('?')[0];
+  const url=base+(base.endsWith('.html')?'':'/proctor-portal-supabase.html')+'?pubform=1&vendor='+encodeURIComponent(p.vendor)+'&ptype='+encodeURIComponent(p.ptype)+'&email='+encodeURIComponent(p.email)+'&token='+token;
 
-  const subject='Action Required: Complete Your Onboarding - Talview';
-  const html=emailTemplate(`
-    <h2 style="color:#1B3A6B;margin:0 0 16px">Welcome to Talview - Complete Your Onboarding</h2>
-    <p>Hi${p.name?' <strong>'+p.name+'</strong>':''},</p>
-    <p>You have been selected as a proctor with Talview. Please complete your onboarding by filling in the form below.</p>
-    <div style="margin:24px 0;text-align:center;">
-      <a href="${url}" style="display:inline-block;background:#1B3A6B;color:#ffffff;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:700;font-size:15px;">Start Onboarding Form</a>
-    </div>
-    <p style="color:#595959;font-size:13px;">If the button does not work, copy and paste this link into your browser:</p>
-    <p style="font-size:12px;color:#888;word-break:break-all;">${url}</p>
-    <p style="color:#595959;font-size:13px;margin-top:16px;">For any questions, contact us at <a href="mailto:${BREVO_DL}" style="color:#2E75B6;">${BREVO_DL}</a></p>
-  `);
+  // Update form_status to shared first
+  if(p.form_status!=='submitted'){
+    p.form_status='shared';p.form_link_token=token;p.upd=new Date().toISOString();
+    await sbFetch('PATCH',T_PROCTORS+'?id=eq.'+p.id,{body:{form_status:'shared',form_link_token:token,upd:p.upd}}).catch(()=>{});
+    addLog('Form Link Shared',p.email,'Sent by '+CU.un);
+  }
 
-  const sent=await sendBrevoEmail({to:p.email,subject,html}).catch(e=>{console.error('sendOnboardingLink error:',e);return false;});
-
-  if(sent){
-    toast('Onboarding form sent to '+p.email,'success');
-    if(p.form_status!=='submitted'){
-      p.form_status='shared';p.form_link_token=token;p.upd=new Date().toISOString();
-      p.form_shared_at=p.form_shared_at||p.upd;
-      sbFetch('PATCH',T_PROCTORS+'?id=eq.'+p.id,{body:{form_status:'shared',form_link_token:token,form_shared_at:p.form_shared_at,upd:p.upd}}).catch(()=>{});
-      addLog('Form Link Sent',p.email,'Email sent by '+CU.un);
+  // Send email via Brevo if API key available
+  if(BREVO_API_KEY){
+    showSaving('Sending email...');
+    const subject='Action Required: Complete Your Onboarding — Talview';
+    const html=emailTemplate(`
+      <h2 style="color:#1B3A6B;margin:0 0 8px">Complete Your Onboarding</h2>
+      <p>Dear Proctor,</p>
+      <p>You have been selected for the Talview Proctor Program. Please click the button below to complete your initial onboarding form.</p>
+      <div style="text-align:center;margin:28px 0;">
+        <a href="${url}" style="display:inline-block;background:#2E75B6;color:#ffffff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;">📝 Complete Onboarding Form</a>
+      </div>
+      <p style="color:#888;font-size:12px;">This link is personal to your email (${p.email}) and cannot be used by others.</p>
+      <p style="color:#888;font-size:12px;">Managed By: <strong>${p.vendor}</strong> · Type: <strong>${p.ptype}</strong></p>
+      <p style="color:#888;font-size:12px;">If you have questions, contact <a href="mailto:${BREVO_DL}">${BREVO_DL}</a></p>
+    `);
+    const sent=await sendBrevoEmail({to:{email:p.email,name:p.email.split('@')[0]},subject,html}).catch(()=>false);
+    hideSaving();
+    if(sent){
+      toast('Onboarding form emailed to '+p.email,'success');
+    } else {
+      // Fallback to clipboard
+      navigator.clipboard.writeText(url).then(()=>toast('Email failed — link copied to clipboard instead','warning')).catch(()=>prompt('Email failed. Copy this link manually:',url));
     }
   } else {
-    toast('Failed to send email - open DevTools (F12) Console for details','error');
-    if(btn){btn.disabled=false;btn.textContent='Send Form';}
-    return;
+    // No Brevo key — copy to clipboard
+    navigator.clipboard.writeText(url).then(()=>toast('Link copied to clipboard — share with proctor manually','success')).catch(()=>prompt('Copy this link:',url));
   }
   renderInterviewSelects();
 }
