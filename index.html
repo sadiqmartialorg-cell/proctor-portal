@@ -1831,7 +1831,7 @@ function buildNav(){
         <div class="nav-item" onclick="nav('customers')"><span class="icon">🏢</span>Customers</div>
         <div class="nav-item" onclick="nav('vendors')"><span class="icon">🤝</span>Managed By</div>
         <div class="nav-item" onclick="nav('audit')"><span class="icon">📋</span>Audit Log</div>`,'sys',false);
-    document.getElementById('tAc').innerHTML='<a href="attendance-portal.html" class="btn btn-ghost btn-sm" style="text-decoration:none;">📅 Attendance</a><button class="btn btn-ghost btn-sm" id="refreshBtn" onclick="manualRefreshWithFeedback()">🔄 Refresh</button><button class="btn btn-primary btn-sm" onclick="nav(\'onboarding\')">⏳ Review Pending</button>';
+    document.getElementById('tAc').innerHTML='<a href="attendance-portal.html" class="btn btn-ghost btn-sm" style="text-decoration:none;">📅 Attendance</a><button class="btn btn-ghost btn-sm" id="refreshBtn" onclick="manualRefreshWithFeedback()">🔄 Refresh</button><button class="btn btn-ghost btn-sm" onclick="testBrevoEmail()" title="Test email service">📧 Test Email</button><button class="btn btn-primary btn-sm" onclick="nav(\'onboarding\')">⏳ Review Pending</button>';
 
   } else if(CU.role==='talview'){
     n.innerHTML=
@@ -1902,12 +1902,13 @@ function populateStateDropdowns(){
 }
 
 // Explicit list of select IDs that should contain vendor/managed-by options
+// ONLY selects that should show vendor/managed-by names
+// Panel selects (demoPanelSel, assessPanelSel, bulkAssessPanelSel) are NOT here
 const VENDOR_SELECT_IDS=[
   'fVen','fOnbV','fActV','fISV','fIncVendor','fHistV',
   'fDemoV','fAssessV','fSchedV','fWsSchedV',
   'fEvalResVDe','fEvalResVAs','fRegVen',
-  'f_vendor','ef_v','eisVendor',
-  'robVendor','bulkAssessPanelSel'
+  'f_vendor','ef_v','eisVendor','robVendor'
 ];
 
 function populateAllVendorDropdowns(){
@@ -1972,8 +1973,6 @@ function nav(pg){
     if(!customers||!customers.length){loadCustomers().then(initCertPage);}else{initCertPage();}
   }
   if(pg==='evaluations')initEvalPage();
-  // Repopulate vendor dropdowns on each page nav (in case they weren't ready on initial load)
-  if(VENDORS.length)populateAllVendorDropdowns();
   if(pg==='workspace')initWorkspace();
   if(pg==='formLinks')renderFormLinks();
   if(pg==='interviewSelects')renderInterviewSelects();
@@ -4058,7 +4057,6 @@ async function loadPrevAttempts(proctorId, type, containerId){
 
 // ── DEMO TAB ──────────────────────────────────────
 function renderDemoAssign(){
-  if(VENDORS.length)populateAllVendorDropdowns();
   const vf=document.getElementById('fDemoV')?.value||'';
   const pt=document.getElementById('fDemoPtype')?.value||'';
   const sq=(document.getElementById('sDemoAssign')?.value||'').toLowerCase();
@@ -4137,7 +4135,6 @@ function assessSubTab(i){
 }
 
 function renderAssessAssign(){
-  if(VENDORS.length)populateAllVendorDropdowns();
   const vf=document.getElementById('fAssessV')?.value||'';
   const pt=document.getElementById('fAssessPtype')?.value||'';
   const sq=(document.getElementById('sAssessAssign')?.value||'').toLowerCase();
@@ -4286,7 +4283,6 @@ async function renderScheduled(){
   const el=document.getElementById('schedBody');if(!el)return;
   el.innerHTML='<tr><td colspan="8" style="padding:16px;text-align:center;color:var(--text3);">Loading...</td></tr>';
   // Support both workspace filter IDs and standalone IDs
-  if(VENDORS.length)populateAllVendorDropdowns();
   const ft=document.getElementById('fWsSchedType')?.value||document.getElementById('fSchedType')?.value||'';
   const fv=document.getElementById('fWsSchedV')?.value||document.getElementById('fSchedV')?.value||'';
   const fd3=document.getElementById('fWsSchedDate')?.value||document.getElementById('fSchedDate')?.value||'';
@@ -5899,6 +5895,25 @@ async function renderEvalResults(type){
 }
 
 
+
+async function testBrevoEmail(){
+  if(!BREVO_API_KEY){
+    // Try to load it now
+    await loadAppConfig();
+    if(!BREVO_API_KEY){
+      toast('Brevo API key not loaded from DB. Check app_config table.','error');
+      return;
+    }
+  }
+  toast('Sending test email to '+BREVO_DL+'...','info');
+  const sent=await sendBrevoEmail({
+    to:BREVO_DL,
+    subject:'[Test] Brevo Email Service Check — Talview Portal',
+    html:emailTemplate('<h2>Test Email ✅</h2><p>Brevo email service is working correctly from the Talview Proctor Management Portal.</p><p style="color:#888;font-size:12px;">API Key loaded from Supabase app_config. Sent by: '+CU.un+'</p>')
+  });
+  if(sent)toast('✅ Test email sent to '+BREVO_DL+' — check inbox','success');
+  else toast('❌ Email failed — check browser console for CORS/API errors. Must be on GitHub Pages, not file://','error');
+}
 
 function addLog(action,target,det){
   const entry={id:'l'+Date.now(),ts:new Date().toISOString(),user:CU?.un||'system',action,target,det};
