@@ -649,7 +649,7 @@ body.role-vendor .vendor-filter{display:none!important;}
                 <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px;" id="assessAssignTitle">Schedule Assessment</div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                   <div class="form-group"><label>Panel (Coordinator) <span class="req">*</span></label><select id="assessPanelSel"><option value="">Select coordinator...</option></select></div>
-                  <div class="form-group"><label>Scheduled Date <span class="req">*</span></label><input type="date" id="assessSchedDate"/></div>
+                  <div class="form-group"><label>Scheduled Date <span class="req">*</span></label><input type="date" id="assessSchedDate" min="" onchange="validateFutureDateTime('assessSchedDate','assessSchedTime')"/></div>
                   <div class="form-group"><label>Scheduled Time <span class="req">*</span></label><input type="time" id="assessSchedTime"/></div>
                   <div class="form-group"><label>Score Out Of <span class="req">*</span></label><input type="number" id="assessScoreOutOf" placeholder="e.g. 100" min="1"/></div>
                 </div>
@@ -666,7 +666,7 @@ body.role-vendor .vendor-filter{display:none!important;}
                 <p style="color:var(--text2);font-size:13px;margin-bottom:16px;">Set the panel, date, time and score. Then download the pre-filled template with all Ready proctors and upload results.</p>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
                   <div class="form-group"><label>Panel (Coordinator) <span class="req">*</span></label><select id="bulkAssessPanelSel"><option value="">Select coordinator...</option></select></div>
-                  <div class="form-group"><label>Scheduled Date <span class="req">*</span></label><input type="date" id="bulkAssessDate"/></div>
+                  <div class="form-group"><label>Scheduled Date <span class="req">*</span></label><input type="date" id="bulkAssessDate" min="" onchange="validateFutureDateTime('bulkAssessDate','bulkAssessTime')"/></div>
                   <div class="form-group"><label>Scheduled Time <span class="req">*</span></label><input type="time" id="bulkAssessTime"/></div>
                   <div class="form-group"><label>Score Out Of <span class="req">*</span></label><input type="number" id="bulkAssessScore" placeholder="e.g. 100" min="1"/></div>
                 </div>
@@ -1005,14 +1005,10 @@ body.role-vendor .vendor-filter{display:none!important;}
   <div class="mh"><h3 id="mReschedTl">Edit Event</h3><button class="mcl" onclick="cm('mResched')">×</button></div>
   <div class="mb">
     <div class="fg2">
-      <div class="form-group">
-        <label>Panel (Coordinator)</label>
-        <select id="mReschedPanel"><option value="">No change</option></select>
-      </div>
-      <div class="form-group">
-        <label>Scheduled Date <span class="req">*</span></label>
-        <input type="date" id="mReschedDate"/>
-      </div>
+      <div class="form-group"><label>Panel (Coordinator)</label><select id="mReschedPanel"><option value="">No change</option></select></div>
+      <div class="form-group"><label>Scheduled Date <span class="req">*</span></label><input type="date" id="mReschedDate"/></div>
+      <div class="form-group"><label>Scheduled Time</label><input type="time" id="mReschedTime"/></div>
+      <div class="form-group"><label>Score Out Of</label><input type="number" id="mReschedScore" placeholder="e.g. 100" min="1"/></div>
     </div>
   </div>
   <div class="mf">
@@ -1879,6 +1875,7 @@ function toggleNavSec(id, el){
 
 function onbTab(i){
   document.querySelectorAll('#onbTabHdr .tab').forEach((t,j)=>t.classList.toggle('active',i===j));
+  if(VENDORS.length)setTimeout(populateAllVendorDropdowns,50);
   document.getElementById('onbTab0').style.display=i===0?'':'none';
   document.getElementById('onbTab1').style.display=i===1?'':'none';
 }
@@ -1966,7 +1963,7 @@ function nav(pg){
   if(pg==='bulkBGV')renderBulkBGV();
   if(pg==='myProctors')renderMyPro();
   if(pg==='credentials')renderCreds();
-  if(pg==='addProctor'){onbTab(0);setTimeout(()=>{populateStateDropdowns();applyVendorLock();},50);}
+  if(pg==='addProctor'){onbTab(0);setTimeout(()=>{populateStateDropdowns();applyVendorLock();populateAllVendorDropdowns();},50);}
   if(pg==='bulkUpload'){nav('addProctor');onbTab(1);return;}
   if(pg==='customers')renderCustomers();
   if(pg==='certifications'){
@@ -2082,14 +2079,22 @@ function renderOnboard(){
     if(!bothPass){
       btn=`<button class="btn btn-ghost btn-sm" disabled title="Assessment and Demo must both pass first" style="opacity:.45;cursor:not-allowed;">📨 Trigger NDA</button>`;
     } else if(!ndaPending&&!ndaSigned){
-      btn=`<button class="btn btn-primary btn-sm" onclick="openNDATrigger('${p.id}')">📨 Mark NDA Triggered</button>`;
+      btn=`<button class="btn btn-primary btn-sm" onclick="openNDATrigger('${p.id}')">📨 Trigger NDA & Docs</button>`;
     } else if(ndaPending&&!ndaSigned){
       btn=`<button class="btn btn-ghost btn-sm" disabled title="Waiting for proctor to sign" style="opacity:.45;cursor:not-allowed;">⏳ NDA Pending</button>`;
     } else if(ndaSigned){
       btn=`<button class="btn btn-success btn-sm" onclick="openAssign('${p.id}')">🎯 Assign ID</button>`;
     }
+    // Verify: available to admin and vendor (for their own proctors), only after NDA signed + all docs received
+    const docsOk=['doc_resume','doc_passport_photo','doc_grad_cert','doc_aadhaar_copy','doc_pan_copy','doc_eye_test'].every(d=>p[d]);
+    const ndaSignedOk=p.nda_status==='NDA Signed';
+    const canVerify=(p.status==='In Progress'||p.status==='Verified')&&docsOk&&ndaSignedOk&&!p.vendor_verified;
+    const verifyBtn=canVerify
+      ?`<button class="btn btn-ghost btn-sm" onclick="openVerify('${p.id}')">✅ Verify</button>`
+      :(docsOk&&ndaSignedOk&&p.vendor_verified?`<span style="font-size:11px;color:var(--success);font-weight:600;">✅ Verified</span>`
+        :`<button class="btn btn-ghost btn-sm" disabled title="${!ndaSignedOk?'NDA not signed':!docsOk?'Documents not submitted':'Already verified'}" style="opacity:.4;cursor:not-allowed;">✅ Verify</button>`);
     return`<div class="ag"><button class="btn btn-ghost btn-sm" onclick="viewP('${p.id}')">👁</button>
-      ${p.status==='In Progress'?`<button class="btn btn-ghost btn-sm" onclick="openVerify('${p.id}')">✅ Verify</button>`:''}
+      ${verifyBtn}
       ${btn}</div>`;
   };
 
@@ -2459,7 +2464,7 @@ function viewP(id){
       ${isA&&p.status!=='Offboarded'&&!ndaSigned?`
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center;">
           ${!demoOk||!assessOk?`<div class="al al-w" style="margin-bottom:0;font-size:12px;">⚠️ Demo and Assessment must both pass before triggering NDA.</div>`:''}
-          ${demoOk&&assessOk&&!ndaPending&&!ndaSigned?`<button class="btn btn-primary btn-sm" onclick="openNDATrigger('${p.id}')">📨 Mark NDA Triggered</button>`:''}
+          ${demoOk&&assessOk&&!ndaPending&&!ndaSigned?`<button class="btn btn-primary btn-sm" onclick="openNDATrigger('${p.id}')">📨 Trigger NDA & Docs</button>`:''}
           ${ndaPending?`<div class="al al-w" style="margin-bottom:0;font-size:12px;">⏳ NDA pending — waiting for proctor to sign via HelloSign. Webhook will update automatically.</div>`:''}
           ${demoOk&&assessOk?`<button class="btn btn-ghost btn-sm" onclick="openManualNDASigned('${p.id}')">📎 Upload Signed NDA Manually</button>`:''}
         </div>`:''}
@@ -2922,8 +2927,9 @@ async function confirmBulk(){
 // VERIFY / ASSIGN ID / OFFBOARD
 // ══════════════════════════════════════════════════
 function openVerify(id){
-  if(CU.role!=='admin'){toast('No permission','error');return;}
   const p=proctors.find(x=>x.id===id);if(!p)return;
+  if(CU.role==='vendor'&&p.vendor!==CU.vendor){toast('No permission — not your proctor','error');return;}
+  if(CU.role!=='admin'&&CU.role!=='vendor'){toast('No permission','error');return;}
   CA={vId:id};
   document.getElementById('vNm').textContent=p.name+' ('+p.vendor+')';
   document.getElementById('vNt').value='';om('mVer');
@@ -3998,6 +4004,7 @@ let _assessRows = [];
 
 async function initEvalPage(){
   await loadPanelUsers();
+  setDateInputMins();
   // Populate panel selectors
   const panelOpts=_evalPanelUsers.map(u=>`<option value="${u}">${u}</option>`).join('');
   ['demoPanelSel','assessPanelSel','bulkAssessPanelSel'].forEach(id=>{
@@ -4097,9 +4104,11 @@ async function confirmDemoAssign(){
   const schedTime=document.getElementById('demoSchedTime').value;
   const scoreOutOf=document.getElementById('demoScoreOutOf').value;
   if(!panel){toast('Select a coordinator','error');return;}
-  const today=new Date().toISOString().slice(0,10);
+  const nowA=new Date();
+  const today=nowA.toISOString().slice(0,10);
   if(!sched){toast('Select a scheduled date','error');return;}
   if(sched<today){toast('Cannot schedule on a past date','error');return;}
+  if(sched===today&&schedTime){const[h,m]=schedTime.split(':').map(Number);const sd=new Date();sd.setHours(h,m,0,0);if(sd<=nowA){toast('Cannot schedule at a past time for today','error');return;}}
   if(!schedTime){toast('Select a scheduled time','error');return;}
   if(!scoreOutOf){toast('Enter score out of','error');return;}
   const selected=_demoRows.filter(p=>_demoSelIds.has(p.id));
@@ -4304,9 +4313,9 @@ async function renderScheduled(){
         <td><span style="color:var(--accent);font-size:11px;font-weight:700;">📅 Scheduled</span></td>
         <td style="font-size:11px;font-family:'DM Mono',monospace;">${r.score_out_of||'—'}</td>
         <td><div class="ag">
-          ${new Date().toISOString().slice(0,10)>=r.scheduled_date
+          ${canEvaluateNow(r)
             ?`<button class="btn btn-primary btn-sm" onclick="openEvalResult('${r.id}')">📝 Evaluate</button>`
-            :`<button class="btn btn-ghost btn-sm" disabled title="Available on ${fd2(r.scheduled_date)}" style="opacity:.45;cursor:not-allowed;">🔒 ${fd2(r.scheduled_date)}</button>`}
+            :`<button class="btn btn-ghost btn-sm" disabled title="Unlocks 30min before: ${fd2(r.scheduled_date)}${r.scheduled_time?' '+r.scheduled_time:''}" style="opacity:.45;cursor:not-allowed;">🔒 ${fd2(r.scheduled_date)}${r.scheduled_time?' '+r.scheduled_time:''}</button>`}
           ${CU.role==='admin'?`<button class="btn btn-ghost btn-sm" onclick="openReschedule('${r.id}','${r.eval_type}')">✏️ Edit</button>`:''}
         </div></td>
       </tr>`;
@@ -4334,9 +4343,15 @@ function openReschedule(evalId, type){
 async function confirmResched(){
   const newDate=document.getElementById('mReschedDate').value;
   const newPanel=document.getElementById('mReschedPanel').value;
+  const newTime=document.getElementById('mReschedTime').value;
+  const newScore=document.getElementById('mReschedScore').value;
   if(!newDate){toast('Date is required','error');return;}
+  const today=new Date().toISOString().slice(0,10);
+  if(newDate<today){toast('Cannot reschedule to a past date','error');return;}
   const body={scheduled_date:newDate};
   if(newPanel)body.panel_user=newPanel;
+  if(newTime)body.scheduled_time=newTime;
+  if(newScore)body.score_out_of=parseFloat(newScore);
   showSaving('Saving...');
   try{
     await sbFetch('PATCH',T_EVALS+'?id=eq.'+CA._reschedId,{body});
@@ -4390,10 +4405,10 @@ function openEvalResult(evalId){
     if(!rows||!rows.length)return;
     const r=rows[0];
     const p=proctors.find(x=>x.id===r.proctor_id)||{name:'Unknown',vendor:'—'};
-    const today=new Date().toISOString().slice(0,10);
-    if(r.scheduled_date && today<r.scheduled_date){
+    if(!canEvaluateNow(r)){
       cm('mEvalResult');
-      toast('Evaluation only available on or after '+fd2(r.scheduled_date),'error');
+      const unlockTime=r.scheduled_time?fd2(r.scheduled_date)+' at '+r.scheduled_time+' (30 min before)':fd2(r.scheduled_date);
+      toast('Evaluation unlocks 30 minutes before the scheduled time: '+unlockTime,'error');
       return;
     }
     const isOverride=!!r.result;
@@ -4425,6 +4440,7 @@ async function saveEvalResult(){
   const scoreRaw=document.getElementById('evalScore')?.value;
   const score=scoreRaw?parseFloat(scoreRaw):null;
   if(!result){document.getElementById('e_evalResult').textContent='Result is required';return;}
+  if(score===null||score===''||isNaN(score)){document.getElementById('e_evalScore').textContent='Score is required';return;}
   if(['Reattempt','Reschedule'].includes(result)&&!finalComment){document.getElementById('e_evalComment').textContent='Comment is required for '+result;return;}
   try{
     showSaving('Saving result...');
@@ -4488,11 +4504,13 @@ function dlBulkAssessTemplate(){
   const date=document.getElementById('bulkAssessDate')?.value||'';
   const time=document.getElementById('bulkAssessTime')?.value||'';
   const score=document.getElementById('bulkAssessScore')?.value||'';
-  const today=new Date().toISOString().slice(0,10);
+  const now2=new Date();
+  const today=now2.toISOString().slice(0,10);
   if(!panel){toast('Select a Panel Coordinator first','error');return;}
   if(!date){toast('Select a Scheduled Date first','error');return;}
   if(date<today){toast('Cannot schedule on a past date','error');return;}
   if(!time){toast('Select a Scheduled Time first','error');return;}
+  if(date===today){const[h,m]=time.split(':').map(Number);const sd=new Date();sd.setHours(h,m,0,0);if(sd<=now2){toast('Cannot schedule at a past time for today','error');return;}}
   if(!score||parseFloat(score)<1){toast('Enter a valid Score Out Of','error');return;}
   const ready=proctors.filter(p=>p.assessment_ready==='ready');
   if(!ready.length){toast('No proctors with Assessment Ready status','error');return;}
@@ -4591,7 +4609,7 @@ async function confirmNDATrigger(){
   p.nda_status='NDA Pending';p.nda_triggered_at=new Date().toISOString();p.nda_triggered_by=CU.un;p.form_link_token=token;p.upd=new Date().toISOString();
   showSaving('Sending NDA email...');
   await sbFetch('PATCH',T_PROCTORS+'?id=eq.'+p.id,{body:{nda_status:'NDA Pending',nda_triggered_at:p.nda_triggered_at,nda_triggered_by:CU.un,form_link_token:token,upd:p.upd}});
-  addLog('NDA Triggered',p.name,'Triggered by '+CU.un+' · '+p.email);
+  addLog('NDA & Docs Triggered',p.name,'Triggered by '+CU.un+' · '+p.email);
   // Send email to proctor with Sign NDA + Upload Documents links
   const emailSent=await emailNDAAndDocUpload(p,token).catch(()=>false);
   hideSaving();cm('mNDA');
@@ -5051,15 +5069,7 @@ async function loadVendorsDB(){
     VENDOR_DATA=rows;
     VENDORS=rows.map(r=>r.name);
     rows.forEach(r=>{VC[r.name]=r.code;VCL[r.name]='v-'+r.code.toLowerCase();});
-    // Refresh all vendor dropdowns
-    document.querySelectorAll('select.fsel, select[id^="f"][id$="V"], select[id^="f"][id$="Ven"]').forEach(sel=>{
-      if(sel.options.length>0&&sel.options[0].value===''){
-        const cur=sel.value;
-        while(sel.options.length>1)sel.remove(1);
-        VENDORS.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});
-        if(cur)sel.value=cur;
-      }
-    });
+    // Vendor dropdowns populated via populateAllVendorDropdowns() which uses explicit ID list
   }catch(e){console.warn('loadVendorsDB failed:',e.message);}
 }
 
@@ -5419,8 +5429,11 @@ async function sendOnboardingLink(proctorId){
   const p=proctors.find(x=>x.id===proctorId);if(!p)return;
   if(!p.email){toast('Proctor has no email address — edit the record first','error');return;}
   const token=p.form_link_token||crypto.randomUUID().replace(/-/g,'');
-  const base=PORTAL_BASE_URL||window.location.href.split('?')[0];
-  const url=base+(base.endsWith('.html')?'':'/proctor-portal-supabase.html')+'?pubform=1&vendor='+encodeURIComponent(p.vendor)+'&ptype='+encodeURIComponent(p.ptype)+'&email='+encodeURIComponent(p.email)+'&token='+token;
+  // Build the correct URL to this portal file
+  const portalUrl=PORTAL_BASE_URL
+    ? PORTAL_BASE_URL+'/proctor-portal-supabase.html'
+    : window.location.href.split('?')[0]; // already the full .html path when opened locally
+  const url=portalUrl+'?pubform=1&vendor='+encodeURIComponent(p.vendor)+'&ptype='+encodeURIComponent(p.ptype)+'&email='+encodeURIComponent(p.email)+'&token='+token;
 
   // Update form_status to shared first
   if(p.form_status!=='submitted'){
@@ -5473,6 +5486,33 @@ function exportISLinks(){
   const blob=new Blob([BOM+hdr+'\n'+rows.join('\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='interview_selects_links_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
   toast('Links exported','success');
+}
+
+// ══════════════════════════════════════════════════
+// SET MINIMUM DATE ON DATE INPUTS
+// ══════════════════════════════════════════════════
+function setDateInputMins(){
+  const today=new Date().toISOString().slice(0,10);
+  ['demoSchedDate','assessSchedDate','bulkAssessDate','mReschedDate'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.min=today;
+  });
+}
+
+// ══════════════════════════════════════════════════
+// EVALUATION TIME UNLOCK (30 min before scheduled)
+// ══════════════════════════════════════════════════
+function canEvaluateNow(r){
+  if(!r.scheduled_date)return false;
+  const today=new Date().toISOString().slice(0,10);
+  if(r.scheduled_date<today)return true; // overdue — always allow
+  if(r.scheduled_date>today)return false; // future date — not yet
+  // Same day — check if within 30 min of scheduled time
+  if(!r.scheduled_time)return true; // no time set — allow on the day
+  const[h,m]=(r.scheduled_time||'00:00').split(':').map(Number);
+  const schedMs=new Date();schedMs.setHours(h,m,0,0);
+  const unlockMs=schedMs.getTime()-30*60*1000; // 30 min before
+  return Date.now()>=unlockMs;
 }
 
 // ══════════════════════════════════════════════════
@@ -5679,7 +5719,7 @@ function groupTaskCards(rows,when){
 function taskCard(r,when){
   const p=proctors.find(x=>x.id===r.proctor_id)||{name:'Unknown',vendor:'—',ptype:'—'};
   const border=when==='overdue'?'var(--danger)':when==='today'?'var(--accent)':'var(--border)';
-  const canEval=new Date().toISOString().slice(0,10)>=r.scheduled_date;
+  const canEval=canEvaluateNow(r);
   const panelInfo=CU.role==='admin'?`<span style="font-size:11px;color:var(--accent);">Panel: ${r.panel_user}</span> · `:'';
   const score=r.score_out_of?`<span style="font-size:11px;color:var(--text3);">Score out of: ${r.score_out_of}</span> · `:'';
   return`<div class="task-card" style="border-left:3px solid ${border};">
@@ -5696,7 +5736,7 @@ function taskCard(r,when){
 function taskCardGroup(rows,when){
   const border=when==='overdue'?'var(--danger)':when==='today'?'var(--accent)':'var(--border)';
   const panel=rows[0].panel_user,date=rows[0].scheduled_date;
-  const canEval=new Date().toISOString().slice(0,10)>=date;
+  const canEval=canEvaluateNow({scheduled_date:date,scheduled_time:rows[0].scheduled_time});
   const score=rows[0].score_out_of?` · Score out of: ${rows[0].score_out_of}`:'';
   const grpId='grp_'+panel.replace(/\W/g,'')+'_'+date.replace(/-/g,'');
   return`<div class="task-card" style="border-left:3px solid ${border};flex-direction:column;align-items:stretch;">
@@ -5824,8 +5864,19 @@ const EVAL_COMMENTS={
 function updateEvalComments(){
   const result=document.getElementById('evalResult')?.value;
   const commentSel=document.getElementById('evalComment');
-  const scoreEl=document.getElementById('evalScore');
   if(!commentSel)return;
+  if(!result){
+    // No result selected — disable comment dropdown
+    commentSel.disabled=true;commentSel.style.opacity='.5';commentSel.style.cursor='not-allowed';
+    commentSel.innerHTML='<option value="">Select a Result first...</option>';
+    const commentReqEl=document.getElementById('evalCommentReq');
+    const commentOptEl=document.getElementById('evalCommentOpt');
+    if(commentReqEl)commentReqEl.style.display='none';
+    if(commentOptEl)commentOptEl.style.display='';
+    return;
+  }
+  // Result selected — enable and populate with mapped reasons only
+  commentSel.disabled=false;commentSel.style.opacity='1';commentSel.style.cursor='';
   const opts=EVAL_COMMENTS[result]||['Other'];
   commentSel.innerHTML='<option value="">Select reason...</option>'+opts.map(o=>`<option value="${o}">${o}</option>`).join('');
   const req=['Reattempt','Reschedule'].includes(result);
@@ -5833,11 +5884,6 @@ function updateEvalComments(){
   const commentOptEl=document.getElementById('evalCommentOpt');
   if(commentReqEl)commentReqEl.style.display=req?'':'none';
   if(commentOptEl)commentOptEl.style.display=req?'none':'';
-  // Score: only required for Pass and Reattempt (panel should always submit score if applicable)
-  const scoreReqEl=document.getElementById('evalScoreReq');
-  const scoreLblEl=document.getElementById('evalScoreLabel');
-  if(scoreEl)scoreEl.required=!!result&&result!=='No Show';
-  if(scoreReqEl)scoreReqEl.style.display=(result&&result!=='No Show')?'':'none';
 }
 
 // ══════════════════════════════════════════════════
