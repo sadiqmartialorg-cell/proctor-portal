@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Sign NDA — Talview</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',Arial,sans-serif;min-height:100vh;}
+.header{background:#1B3A6B;padding:16px 32px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.4);}
+.header-logo{font-size:20px;font-weight:800;color:#fff;letter-spacing:-.02em;}
+.header-sub{font-size:13px;color:#BDD7EE;}
+.header-step{margin-left:auto;font-size:12px;color:#BDD7EE;background:rgba(255,255,255,.1);padding:4px 12px;border-radius:20px;}
+.main{display:flex;height:calc(100vh - 60px);}
+.pdf-panel{flex:1;display:flex;flex-direction:column;background:#1a1a2e;border-right:1px solid #2d3748;}
+.pdf-toolbar{display:flex;align-items:center;gap:8px;padding:10px 16px;background:#1e2235;border-bottom:1px solid #2d3748;}
+.pdf-toolbar button{background:#2d3748;border:none;color:#e2e8f0;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;}
+.pdf-toolbar button:hover{background:#374151;}
+.pdf-toolbar span{font-size:13px;color:#94a3b8;margin:0 8px;}
+.pdf-canvas-wrap{flex:1;overflow:auto;display:flex;justify-content:center;padding:16px;background:#111827;}
+#pdfCanvas{border:1px solid #2d3748;box-shadow:0 4px 16px rgba(0,0,0,.4);max-width:100%;}
+.sign-panel{width:440px;display:flex;flex-direction:column;overflow-y:auto;background:#0f1117;}
+.sign-section{padding:24px;border-bottom:1px solid #1e293b;}
+.sign-section h3{font-size:14px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px;}
+.form-group{margin-bottom:16px;}
+.form-group label{display:block;font-size:13px;font-weight:600;color:#cbd5e1;margin-bottom:6px;}
+.form-group input{width:100%;background:#1e293b;border:1px solid #334155;border-radius:6px;padding:10px 14px;color:#f1f5f9;font-size:14px;outline:none;}
+.form-group input:focus{border-color:#2E75B6;}
+.sig-wrap{border:1px solid #334155;border-radius:8px;overflow:hidden;background:#fff;position:relative;}
+#sigCanvas{display:block;cursor:crosshair;touch-action:none;}
+.sig-actions{display:flex;gap:8px;margin-top:8px;}
+.btn{padding:10px 20px;border-radius:6px;border:none;cursor:pointer;font-size:14px;font-weight:600;}
+.btn-ghost{background:#1e293b;color:#94a3b8;}
+.btn-ghost:hover{background:#334155;color:#f1f5f9;}
+.btn-primary{background:#2E75B6;color:#fff;}
+.btn-primary:hover{background:#1B3A6B;}
+.btn-success{background:#22543D;color:#fff;width:100%;padding:14px;font-size:15px;}
+.btn-success:hover{background:#276749;}
+.btn-success:disabled{background:#1e293b;color:#4a5568;cursor:not-allowed;}
+.sign-footer{padding:24px;}
+.progress-bar{height:4px;background:#1e293b;border-radius:2px;margin-bottom:12px;}
+.progress-fill{height:100%;background:#2E75B6;border-radius:2px;transition:width .3s;}
+.status-msg{font-size:13px;color:#94a3b8;text-align:center;margin-bottom:12px;}
+.field-error{color:#fc8181;font-size:12px;margin-top:4px;}
+.success-screen{display:none;text-align:center;padding:60px 32px;}
+.success-screen .icon{font-size:64px;margin-bottom:16px;}
+.success-screen h2{font-size:24px;font-weight:700;color:#48bb78;margin-bottom:8px;}
+.success-screen p{color:#94a3b8;font-size:14px;}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-logo">Talview</div>
+  <div class="header-sub">NDA Signing</div>
+  <div class="header-step" id="stepLabel">Step 1 of 2 — Review Document</div>
+</div>
+<div class="main" id="mainContent">
+  <!-- PDF Viewer -->
+  <div class="pdf-panel">
+    <div class="pdf-toolbar">
+      <button onclick="prevPage()">◀ Prev</button>
+      <span id="pageInfo">Page 1 of ?</span>
+      <button onclick="nextPage()">Next ▶</button>
+      <span style="flex:1"></span>
+      <span style="font-size:12px;color:#64748b;">Scroll to review all pages before signing</span>
+    </div>
+    <div class="pdf-canvas-wrap"><canvas id="pdfCanvas"></canvas></div>
+  </div>
+
+  <!-- Signing Panel -->
+  <div class="sign-panel">
+    <div class="sign-section">
+      <h3>Your Details</h3>
+      <div class="form-group">
+        <label>Full Name (as per Aadhaar) <span style="color:#fc8181;">*</span></label>
+        <input id="signerName" placeholder="Enter your full legal name" oninput="onNameInput()"/>
+        <div class="field-error" id="nameErr"></div>
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input id="signerDate" readonly style="color:#94a3b8;background:#111827;"/>
+      </div>
+    </div>
+
+    <div class="sign-section">
+      <h3>Your Signature</h3>
+      <p style="font-size:12px;color:#64748b;margin-bottom:12px;">Draw your signature in the box below using your mouse or finger.</p>
+      <div class="sig-wrap">
+        <canvas id="sigCanvas" width="390" height="130"></canvas>
+      </div>
+      <div class="sig-actions">
+        <button class="btn btn-ghost" onclick="clearSig()">Clear</button>
+        <span style="flex:1"></span>
+        <span id="sigStatus" style="font-size:12px;color:#64748b;align-self:center;">Not signed yet</span>
+      </div>
+      <div class="field-error" id="sigErr"></div>
+    </div>
+
+    <div class="sign-footer">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      <div class="status-msg" id="statusMsg">Please review the entire document before submitting.</div>
+      <button class="btn btn-success" id="submitBtn" onclick="submitNDA()" disabled>
+        ✍️ Submit Signed NDA
+      </button>
+      <p style="font-size:11px;color:#4a5568;text-align:center;margin-top:12px;">By submitting, you agree to the terms of the NDA and confirm your identity.</p>
+    </div>
+  </div>
+</div>
+
+<div class="success-screen" id="successScreen">
+  <div class="icon">✅</div>
+  <h2>NDA Signed Successfully!</h2>
+  <p id="successMsg">Your signed NDA has been submitted to Talview.<br/>You will receive confirmation shortly.</p>
+  <p style="color:#4a5568;font-size:12px;margin-top:24px;">You can now close this window.</p>
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────
+const SB_URL='https://vukijbppuchsmwoyrbjt.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1a2lqYnBwdWNoc213b3lyYmp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI0OTEyMzMsImV4cCI6MjA1ODA2NzIzM30.c9_0jMsFH9eGN9J0q7QhKmFbOKW7jZSgBFYWxVHpMOA';
+
+let BREVO_API_KEY = null;
+async function loadAppConfig() {
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/app_config`, {
+      headers: {
+        'apikey': SB_KEY,
+        'Authorization': 'Bearer ' + SB_KEY
+      }
+    });
+    const data = await res.json();
+    const config = {};
+    data.forEach(r => config[r.key] = r.value);
+    BREVO_API_KEY = config.brevo_api_key;
+  } catch(e){ console.error('Config load failed', e); }
+}
+
+const SB_STORAGE='https://vukijbppuchsmwoyrbjt.supabase.co/storage/v1';
+const NDA_PDF_URL='https://vukijbppuchsmwoyrbjt.supabase.co/storage/v1/object/public/nda-documents/nda-template.pdf';
+// BREVO_API_KEY loaded from app_config
+const BREVO_DL='managedservices@talview.com';
+const BREVO_SENDER={name:'Talview Managed Services',email:'sadiq.a@talview.com'};
+
+// Signing page positions (from PDF analysis)
+// All pages use: name at right-center area, date at left, signature canvas at right
+const SIGN_PAGES = [
+  // {pageIndex, namePage, nameX, nameY, dateX, dateY, sigX, sigY, sigW, sigH}
+  // Page 1 (index 0): 595.5 x 842 — Name at x=420,y=652 Date at x=420,y=685
+  { pageIndex:0, nameX:420, nameY:652, dateX:420, dateY:685, sigX:370, sigY:585, sigW:160, sigH:55 },
+  // Page 11 (index 10): similar layout
+  { pageIndex:10, nameX:420, nameY:652, dateX:420, dateY:685, sigX:370, sigY:585, sigW:160, sigH:55 },
+  // Page 29 (index 28): similar
+  { pageIndex:28, nameX:420, nameY:652, dateX:420, dateY:685, sigX:370, sigY:585, sigW:160, sigH:55 },
+  // Page 333 (index 332): 612 x 792 — Name at x=360,y=208 Date at x=72,y=215 Sig at x=324,y=230
+  { pageIndex:332, nameX:360, nameY:208, dateX:72, dateY:222, sigX:324, sigY:230, sigW:200, sigH:90 },
+];
+
+// ── URL params ──────────────────────────────────────────
+const params=new URLSearchParams(location.search);
+const proctorId=params.get('pid')||'';
+const token=params.get('token')||'';
+let proctorData=null;
+
+// ── PDF state ───────────────────────────────────────────
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+let pdfDoc=null,curPage=1,totalPages=0,pagesRead=new Set();
+let ndaPdfBytes=null; // original PDF bytes for pdf-lib
+
+// ── Signature pad ───────────────────────────────────────
+const sigCanvas=document.getElementById('sigCanvas');
+const sigCtx=sigCanvas.getContext('2d');
+let isDrawing=false,hasSig=false;
+sigCtx.lineWidth=2.5;sigCtx.lineCap='round';sigCtx.strokeStyle='#1B3A6B';
+
+sigCanvas.addEventListener('mousedown',e=>{isDrawing=true;sigCtx.beginPath();sigCtx.moveTo(...pos(e,sigCanvas));});
+sigCanvas.addEventListener('mousemove',e=>{if(!isDrawing)return;sigCtx.lineTo(...pos(e,sigCanvas));sigCtx.stroke();hasSig=true;updateSigStatus();});
+sigCanvas.addEventListener('mouseup',()=>isDrawing=false);
+sigCanvas.addEventListener('touchstart',e=>{e.preventDefault();isDrawing=true;sigCtx.beginPath();sigCtx.moveTo(...pos(e.touches[0],sigCanvas));});
+sigCanvas.addEventListener('touchmove',e=>{e.preventDefault();if(!isDrawing)return;sigCtx.lineTo(...pos(e.touches[0],sigCanvas));sigCtx.stroke();hasSig=true;updateSigStatus();});
+sigCanvas.addEventListener('touchend',()=>isDrawing=false);
+
+function pos(e,canvas){const r=canvas.getBoundingClientRect();return[(e.clientX-r.left)*(canvas.width/r.width),(e.clientY-r.top)*(canvas.height/r.height)];}
+function clearSig(){sigCtx.clearRect(0,0,sigCanvas.width,sigCanvas.height);hasSig=false;updateSigStatus();}
+function updateSigStatus(){
+  document.getElementById('sigStatus').textContent=hasSig?'✅ Signature captured':'Not signed yet';
+  document.getElementById('sigStatus').style.color=hasSig?'#22c55e':'#64748b';
+  checkReady();
+}
+function onNameInput(){document.getElementById('nameErr').textContent='';checkReady();}
+function checkReady(){
+  const name=document.getElementById('signerName').value.trim();
+  const ready=name.length>=3&&hasSig&&pagesRead.size>0;
+  document.getElementById('submitBtn').disabled=!ready;
+  if(ready)document.getElementById('statusMsg').textContent='Ready to submit — click the button below.';
+}
+
+// ── Load proctor data ───────────────────────────────────
+async function init(){
+  await loadAppConfig();
+  document.getElementById('signerDate').value=new Date().toLocaleDateString('en-IN');
+  if(!proctorId){showError('Invalid link — no proctor ID found.');return;}
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/proctors?id=eq.${proctorId}`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    const rows=await r.json();
+    if(!rows||!rows.length){showError('Proctor not found. Please check your link.');return;}
+    proctorData=rows[0];
+    // Pre-fill name
+    if(proctorData.name)document.getElementById('signerName').value=proctorData.name;
+    // Check if already signed
+    if(proctorData.nda_status==='NDA Signed'){
+      showSuccess(proctorData.name,'You have already signed the NDA.');return;
+    }
+  }catch(e){console.warn('Proctor load failed:',e);}
+  await loadNDAPdf();
+}
+
+// ── PDF load ─────────────────────────────────────────────
+async function loadNDAPdf(){
+  try{
+    document.getElementById('statusMsg').textContent='Loading NDA document...';
+    // Try to load the NDA from storage, fall back to the uploaded template path
+    const resp=await fetch(NDA_PDF_URL);
+    if(!resp.ok)throw new Error('NDA PDF not found in storage');
+    ndaPdfBytes=await resp.arrayBuffer();
+    const loadTask=pdfjsLib.getDocument({data:ndaPdfBytes.slice(0)});
+    pdfDoc=await loadTask.promise;
+    totalPages=pdfDoc.numPages;
+    await renderPage(1);
+    document.getElementById('statusMsg').textContent='Scroll through all pages, then sign below.';
+  }catch(e){
+    document.getElementById('statusMsg').textContent='⚠️ Could not load NDA PDF: '+e.message;
+    console.error(e);
+  }
+}
+
+async function renderPage(n){
+  curPage=n;
+  const page=await pdfDoc.getPage(n);
+  const vp=page.getViewport({scale:1.4});
+  const canvas=document.getElementById('pdfCanvas');
+  canvas.height=vp.height;canvas.width=vp.width;
+  await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+  pagesRead.add(n);
+  document.getElementById('pageInfo').textContent=`Page ${n} of ${totalPages}`;
+  // Update progress
+  const pct=Math.min(100,Math.round((pagesRead.size/Math.max(1,totalPages))*100));
+  document.getElementById('progressFill').style.width=pct+'%';
+  checkReady();
+}
+function prevPage(){if(curPage>1)renderPage(curPage-1);}
+function nextPage(){if(curPage<totalPages)renderPage(curPage+1);}
+
+// ── Submit ───────────────────────────────────────────────
+async function submitNDA(){
+  const name=document.getElementById('signerName').value.trim();
+  if(!name||name.length<3){document.getElementById('nameErr').textContent='Please enter your full legal name';return;}
+  if(!hasSig){document.getElementById('sigErr').textContent='Please draw your signature';return;}
+  document.getElementById('submitBtn').disabled=true;
+  document.getElementById('submitBtn').textContent='Processing...';
+  document.getElementById('statusMsg').textContent='Embedding signature into NDA document...';
+  try{
+    // 1. Get signature as PNG bytes
+    const sigDataUrl=sigCanvas.toDataURL('image/png');
+    const sigBase64=sigDataUrl.split(',')[1];
+    const sigBytes=Uint8Array.from(atob(sigBase64),c=>c.charCodeAt(0));
+
+    // 2. Load NDA with pdf-lib
+    const {PDFDocument,rgb,StandardFonts}=PDFLib;
+    const pdfDoc2=await PDFDocument.load(ndaPdfBytes);
+    const font=await pdfDoc2.embedFont(StandardFonts.Helvetica);
+    const sigImg=await pdfDoc2.embedPng(sigBytes);
+    const dateStr=new Date().toLocaleDateString('en-IN');
+    const pages=pdfDoc2.getPages();
+
+    // 3. Embed name, date, signature on all 4 signing pages
+    for(const sp of SIGN_PAGES){
+      const pg=pages[sp.pageIndex];
+      if(!pg)continue;
+      const {height}=pg.getSize();
+      // Name (pdf-lib uses bottom-left origin, pdfplumber uses top-left)
+      pg.drawText(name,{x:sp.nameX,y:height-sp.nameY-12,size:10,font,color:rgb(0.1,0.1,0.1)});
+      // Date
+      pg.drawText(dateStr,{x:sp.dateX,y:height-sp.dateY-12,size:10,font,color:rgb(0.1,0.1,0.1)});
+      // Signature image
+      pg.drawImage(sigImg,{x:sp.sigX,y:height-sp.sigY-sp.sigH,width:sp.sigW,height:sp.sigH,opacity:0.9});
+    }
+
+    // 4. Generate signed PDF bytes
+    const signedBytes=await pdfDoc2.save();
+    document.getElementById('statusMsg').textContent='Uploading signed NDA...';
+
+    // 5. Upload to Supabase Storage
+    const fname=`signed_nda_${proctorId}_${Date.now()}.pdf`;
+    const uploadUrl=`${SB_STORAGE}/object/nda-documents/${fname}`;
+    const upResp=await fetch(uploadUrl,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/pdf','x-upsert':'true'},body:signedBytes});
+    if(!upResp.ok)throw new Error('Upload failed: '+upResp.status);
+    const fileUrl=`${SB_STORAGE}/object/public/nda-documents/${fname}`;
+
+    // 6. Update proctor record
+    const now=new Date().toISOString();
+    await fetch(`${SB_URL}/rest/v1/proctors?id=eq.${proctorId}`,{
+      method:'PATCH',
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({nda_status:'NDA Signed',nda_signed_at:now,nda_file_url:fileUrl,nda_signed_name:name,upd:now})
+    });
+
+    // 7. Notify internal team via Brevo
+    await sendBrevoNotification(proctorData?.name||name,proctorData?.email||'',fileUrl);
+
+    showSuccess(name);
+  }catch(e){
+    document.getElementById('submitBtn').disabled=false;
+    document.getElementById('submitBtn').textContent='✍️ Submit Signed NDA';
+    document.getElementById('statusMsg').textContent='❌ Error: '+e.message+' — please try again.';
+    console.error(e);
+  }
+}
+
+async function sendBrevoNotification(name,email,fileUrl){
+  try{
+    if(!BREVO_API_KEY){console.error('Brevo key missing');return;}
+    await fetch('https://api.brevo.com/v3/smtp/email',{
+      method:'POST',
+      headers:{'accept':'application/json','api-key':BREVO_API_KEY,'content-type':'application/json'},
+      body:JSON.stringify({
+        sender:BREVO_SENDER,
+        to:[{email:BREVO_DL}],
+        subject:`[NDA Signed] ${name} has signed the NDA`,
+        htmlContent:`<h2>NDA Signed ✅</h2><p>${name} (${email}) has digitally signed the NDA Agreement.</p>${fileUrl?`<p><a href="${fileUrl}">📄 Download Signed NDA PDF</a></p>`:''}<p>Log in to the portal to proceed with ID assignment.</p>`
+      })
+    });
+  }catch(e){console.warn('Notification email failed:',e.message);}
+}
+
+function showSuccess(name,msg){
+  document.getElementById('mainContent').style.display='none';
+  const sc=document.getElementById('successScreen');
+  sc.style.display='block';
+  if(msg)document.getElementById('successMsg').textContent=msg;
+  else document.getElementById('successMsg').innerHTML=`Your signed NDA has been submitted to Talview, ${name}.<br/>The team will be in touch with your Proctor ID shortly.`;
+}
+function showError(msg){
+  document.getElementById('mainContent').innerHTML=`<div style="flex:1;display:flex;align-items:center;justify-content:center;"><div style="text-align:center;padding:40px;"><div style="font-size:48px;margin-bottom:16px;">⚠️</div><h2 style="color:#fc8181;margin-bottom:8px;">${msg}</h2><p style="color:#94a3b8;font-size:13px;">If you believe this is an error, contact managedservices@talview.com</p></div></div>`;
+}
+
+init();
+</script>
+</body>
+</html>
